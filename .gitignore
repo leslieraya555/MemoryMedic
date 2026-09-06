@@ -1,0 +1,13 @@
+.DS_Store
+.vscode/
+build/
+.venv/
+ml/.venv/
+__pycache__/
+*.py[cod]
+artifacts/
+data/collection_*/
+*.joblib
+data/cache_*.csv
+data/sedVGWL8W
+.github/ci.yml

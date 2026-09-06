@@ -1,0 +1,146 @@
+# File: ci.yml
+# Project: MemoryMedic
+# Author: Leslie Raya
+#
+# Description:
+# Automatically compiles MemoryMedic, runs the C++ tests, verifies the
+# Python files, and checks the shell scripts whenever code is pushed
+# to GitHub or included in a pull request.
+
+name: MemoryMedic CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+  pull_request:
+
+  # Allows the workflow to be started manually from GitHub.
+  workflow_dispatch:
+
+# Give the workflow only the permission needed to read the repository.
+permissions:
+  contents: read
+
+# Cancel an older workflow when a newer commit is pushed to the same branch.
+concurrency:
+  group: memorymedic-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cpp-build-and-test:
+    name: C++ Build and Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      # Download the repository into the GitHub runner.
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      # Display the development tools available in the runner.
+      - name: Display tool versions
+        run: |
+          cmake --version
+          c++ --version
+
+      # Configure a release build with automated testing enabled.
+      - name: Configure CMake
+        run: |
+          cmake \
+            -S . \
+            -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTING=ON
+
+      # Compile MemoryMedic, workloads, and tests.
+      - name: Build MemoryMedic
+        run: |
+          cmake \
+            --build build \
+            --config Release \
+            --parallel 2
+
+      # Run all tests registered in CMakeLists.txt.
+      - name: Run C++ tests
+        run: |
+          ctest \
+            --test-dir build \
+            --build-config Release \
+            --output-on-failure
+
+      # Confirm that the main executable was created.
+      - name: Verify executable
+        run: |
+          test -x build/memorymedic
+          ./build/memorymedic --help
+
+  python-validation:
+    name: Python Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      # Install a consistent Python version.
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: ml/requirements.txt
+
+      # Install the packages used by the ML pipeline.
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r ml/requirements.txt
+
+      # Check every Python file for syntax errors.
+      - name: Check Python syntax
+        run: |
+          python -m py_compile \
+            ml/feature_engineering.py \
+            ml/train_model.py \
+            ml/predict_csv.py
+
+      # Confirm that the main ML modules can be imported.
+      - name: Test Python imports
+        run: |
+          python - <<'PYTHON'
+          import sys
+
+          sys.path.insert(0, "ml")
+
+          import feature_engineering
+          import train_model
+          import predict_csv
+
+          print("MemoryMedic Python modules imported successfully.")
+          print(
+              "Model feature count:",
+              len(feature_engineering.MODEL_FEATURES),
+          )
+          PYTHON
+
+  shell-script-validation:
+    name: Shell Script Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      # Check script syntax without running the workloads.
+      - name: Check dataset collection script
+        run: |
+          bash -n scripts/collect_dataset.sh
+
+      - name: Check demonstration script
+        run: |
+          bash -n scripts/run_demo.sh
