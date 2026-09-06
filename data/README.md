@@ -1,6 +1,6 @@
 # MemoryMedic Dataset
 
-**Project:** MemoryMedic  
+**Project:** MemoryMedic
 **Author:** Leslie Raya
 
 ## Description
