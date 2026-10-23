@@ -1,11 +1,11 @@
-# File: ci.yml
+# File: .github/workflows/ci.yml
 # Project: MemoryMedic
 # Author: Leslie Raya
 #
 # Description:
-# Automatically compiles MemoryMedic, runs the C++ tests, verifies the
-# Python files, and checks the shell scripts whenever code is pushed
-# to GitHub or included in a pull request.
+# Builds and tests the C++ components, runs the Python regression tests,
+# checks Python syntax and imports, and validates the shell scripts.
+# Runs on pushes to main/master, pull requests, or a manual workflow start.
 
 name: MemoryMedic CI
 
@@ -17,14 +17,14 @@ on:
 
   pull_request:
 
-  # Allows the workflow to be started manually from GitHub.
+  # Allow the workflow to be started from the GitHub Actions page.
   workflow_dispatch:
 
-# Give the workflow only the permission needed to read the repository.
+# The workflow only needs permission to read the repository.
 permissions:
   contents: read
 
-# Cancel an older workflow when a newer commit is pushed to the same branch.
+# Cancel an older run for the same workflow and Git reference.
 concurrency:
   group: memorymedic-ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -36,17 +36,15 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      # Download the repository into the GitHub runner.
       - name: Check out repository
         uses: actions/checkout@v7
 
-      # Display the development tools available in the runner.
       - name: Display tool versions
         run: |
           cmake --version
           c++ --version
 
-      # Configure a release build with automated testing enabled.
+      # Configure the C++ build with automated testing enabled.
       - name: Configure CMake
         run: |
           cmake \
@@ -55,7 +53,6 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_TESTING=ON
 
-      # Compile MemoryMedic, workloads, and tests.
       - name: Build MemoryMedic
         run: |
           cmake \
@@ -63,7 +60,6 @@ jobs:
             --config Release \
             --parallel 2
 
-      # Run all tests registered in CMakeLists.txt.
       - name: Run C++ tests
         run: |
           ctest \
@@ -71,7 +67,6 @@ jobs:
             --build-config Release \
             --output-on-failure
 
-      # Confirm that the main executable was created.
       - name: Verify executable
         run: |
           test -x build/memorymedic
@@ -86,7 +81,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v7
 
-      # Install a consistent Python version.
+      # Use a consistent Python version and cache pip downloads.
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
@@ -94,21 +89,27 @@ jobs:
           cache: pip
           cache-dependency-path: ml/requirements.txt
 
-      # Install the packages used by the ML pipeline.
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r ml/requirements.txt
 
-      # Check every Python file for syntax errors.
+      # Require the test file and run the regression suite.
+      # unittest is included with Python; pytest is not required.
+      - name: Run Python regression tests
+        run: |
+          test -s ml/tests/test_ml_pipeline.py
+          python -m unittest discover -s ml/tests -p 'test_*.py' -v
+
+      # Check the ML scripts and the regression test file for syntax errors.
       - name: Check Python syntax
         run: |
           python -m py_compile \
             ml/feature_engineering.py \
             ml/train_model.py \
-            ml/predict_csv.py
+            ml/predict_csv.py \
+            ml/tests/test_ml_pipeline.py
 
-      # Confirm that the main ML modules can be imported.
       - name: Test Python imports
         run: |
           python - <<'PYTHON'
@@ -136,7 +137,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v7
 
-      # Check script syntax without running the workloads.
+      # Validate syntax without running workloads or collecting data.
       - name: Check dataset collection script
         run: |
           bash -n scripts/collect_dataset.sh
@@ -144,3 +145,4 @@ jobs:
       - name: Check demonstration script
         run: |
           bash -n scripts/run_demo.sh
+        
