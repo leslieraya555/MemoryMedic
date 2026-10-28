@@ -1,0 +1,42 @@
+{
+  "project": "MemoryMedic",
+  "maintainer": "Leslie Raya",
+  "purpose": "Illustrative replacement CSV; separate from the September 2026 model benchmark.",
+  "example_path": "data/linear_leak_demo.csv",
+  "capture_started_utc": "2026-10-28T00:34:54.057359+00:00",
+  "capture_finished_utc": "2026-10-28T00:35:36.143324+00:00",
+  "source_commit": "ee90c42078205e06a5dc6b2466d07e56abe81658",
+  "workload": "linear_leak",
+  "label": "leak",
+  "run_id": "example_linear_leak_capture_20261028_003454_8yt9sutt",
+  "requested_duration_seconds": 40,
+  "sampling_interval_ms": 1000,
+  "analysis_window_samples": 10,
+  "rows": 40,
+  "sha256": "3922c2b29312747bdca429ede39753c067d663d0dc52fff3705719ceae0872ec",
+  "replaced_example_sha256": "e7d0e94c04e5c2ad4d7fad3c617da65a4f1612341f63d79217b07530d1084cbf",
+  "source_file_sha256": {
+    "src/ProcReader.cpp": "54bb5b59f583e759631b89daa5f6371df5b2741ea3a8800fc36359c60fd28303",
+    "src/MemoryMedic.cpp": "999fa44db643ab190405f369c298588b496cc74a390effdbd0b578e59c8c687b",
+    "src/MemoryAnalyzer.cpp": "8a76915b1cda43c1a81d24bc1561c70fb1969d4347275bbd2a3265cce949176d",
+    "workloads/LinearLeak.cpp": "a4bc08a8ec5d7401b544be2277f6e8a80ad30c7f3b26847a74ea92a8d5b248c1",
+    "ml/feature_engineering.py": "1f2a486ff5badd5a988f475729ae5aca34c88a42811a84f3e308156557eab975"
+  },
+  "validation": [
+    "read_csv_strict",
+    "add_features",
+    "single known run and leak label",
+    "minimum sample count",
+    "increasing raw timestamps"
+  ],
+  "raw_measurements_edited": false,
+  "environment": {
+    "system": "Linux",
+    "machine": "x86_64",
+    "python": "3.12.14",
+    "pandas": "2.2.3",
+    "numpy": "2.3.5"
+  },
+  "environment_note": "The verification container exposes different child and procfs PID namespaces. A test-only launcher mapped the workload PID to its procfs-visible PID before invoking the unmodified compiled monitor. That launcher is not part of this update.",
+  "historical_benchmark_modified": false
+}

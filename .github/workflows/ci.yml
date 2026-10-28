@@ -101,6 +101,47 @@ jobs:
           test -s ml/tests/test_ml_pipeline.py
           python -m unittest discover -s ml/tests -p 'test_*.py' -v
 
+      # Catch invalid bundled examples with the same strict ML input checks.
+      - name: Validate bundled telemetry examples
+        run: |
+          python - <<'PYTHON'
+          from pathlib import Path
+          import hashlib
+          import json
+          import sys
+
+          sys.path.insert(0, "ml")
+          from feature_engineering import add_features
+          from train_model import read_csv_strict
+
+          examples = {
+              "normal_demo.csv": "normal",
+              "burst_demo.csv": "normal",
+              "linear_leak_demo.csv": "leak",
+          }
+          for name, label in examples.items():
+              path = Path("data") / name
+              frame = read_csv_strict(path)
+              if "run_id" not in frame:
+                  frame["run_id"] = path.stem
+              if "label" not in frame or not frame["label"].eq(label).all():
+                  raise SystemExit(f"Unexpected label in {path}")
+              validated = add_features(frame)
+              if validated["run_id"].nunique() != 1:
+                  raise SystemExit(f"Expected one run in {path}")
+              print(f"PASS: {path} ({len(validated)} rows)")
+
+          path = Path("data/linear_leak_demo.csv")
+          record = json.loads(Path("data/example_provenance.json").read_text())
+          raw = read_csv_strict(path)
+          digest = hashlib.sha256(path.read_bytes()).hexdigest()
+          if digest != record["sha256"] or len(raw) != record["rows"]:
+              raise SystemExit("Replacement example differs from its collection record.")
+          if not raw["run_id"].eq(record["run_id"]).all():
+              raise SystemExit("Replacement example run ID differs from its record.")
+          print("PASS: replacement example collection record")
+          PYTHON
+
       # Check the ML scripts and the regression test file for syntax errors.
       - name: Check Python syntax
         run: |
@@ -145,4 +186,8 @@ jobs:
       - name: Check demonstration script
         run: |
           bash -n scripts/run_demo.sh
-        
+
+      - name: Check fresh-copy verification script
+        run: |
+          bash -n scripts/verify_fresh_copy.sh
+
