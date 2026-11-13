@@ -1232,3 +1232,35 @@ Additional independent benchmarking is required before making strong claims abou
 **Document:** `docs/evaluation_report.md`
 
 **End of Evaluation Report**
+---
+
+## Appendix: Dashboard Workload Verification Screenshots
+
+The following screenshots document the MemoryMedic AI 2.0
+dashboard using four controlled synthetic workloads.
+They provide visual evidence of the historical telemetry
+display and locally demonstrated prediction behavior.
+
+### A. Normal Workload
+
+![Normal workload dashboard and prediction](images/memorymedic-normal-workload-prediction.png)
+
+### B. Linear Memory-Leak Workload
+
+![Linear memory-leak dashboard and prediction](images/memorymedic-linear-leak-prediction.png)
+
+### C. Memory-Burst Workload
+
+![Memory-burst dashboard and prediction](images/memorymedic-memory-burst-prediction.png)
+
+### D. Cache-Growth Workload
+
+![Cache-growth dashboard and prediction](images/memorymedic-cache-growth-prediction.png)
+
+### Evidence Interpretation
+
+These images demonstrate dashboard functionality on
+selected synthetic workloads. They do not establish
+real-world detection accuracy, probability calibration,
+or production readiness.
+
