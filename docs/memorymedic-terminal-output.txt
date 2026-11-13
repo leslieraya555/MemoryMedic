@@ -1,0 +1,28 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.5, pytest-9.2.0, pluggy-1.7.0 -- /Users/leslieitzel/Desktop/MemoryMedic/backend/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/leslieitzel/Desktop/MemoryMedic
+plugins: anyio-4.15.1
+collecting ... collected 13 items
+
+backend/tests/test_main.py::test_root PASSED                             [  7%]
+backend/tests/test_main.py::test_health PASSED                           [ 15%]
+backend/tests/test_metrics.py::test_metrics_reads_real_csv PASSED        [ 23%]
+backend/tests/test_metrics.py::test_metrics_missing_data PASSED          [ 30%]
+backend/tests/test_metrics.py::test_metrics_rejects_invalid_workload PASSED [ 38%]
+backend/tests/test_metrics.py::test_metrics_rejects_invalid_limit PASSED [ 46%]
+backend/tests/test_metrics.py::test_metrics_rejects_invalid_number PASSED [ 53%]
+backend/tests/test_metrics.py::test_metrics_rejects_missing_columns PASSED [ 61%]
+backend/tests/test_metrics.py::test_metrics_rejects_nan PASSED           [ 69%]
+backend/tests/test_predictions.py::test_prediction_success PASSED        [ 76%]
+backend/tests/test_predictions.py::test_prediction_rejects_missing_features PASSED [ 84%]
+backend/tests/test_predictions.py::test_prediction_rejects_duplicate_timestamp PASSED [ 92%]
+backend/tests/test_predictions.py::test_prediction_handles_missing_model PASSED [100%]
+
+=============================== warnings summary ===============================
+backend/.venv/lib/python3.14/site-packages/fastapi/testclient.py:1
+  /Users/leslieitzel/Desktop/MemoryMedic/backend/.venv/lib/python3.14/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================== 13 passed, 1 warning in 0.72s =========================
