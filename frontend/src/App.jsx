@@ -9,6 +9,8 @@ import {
 } from 'recharts'
 import './App.css'
 
+const EMPTY_ROWS = []
+
 const WORKLOADS = [
   { value: 'normal_workload', label: 'Normal workload' },
   { value: 'burst_workload', label: 'Memory burst' },
@@ -67,15 +69,23 @@ export default function App() {
   const [predicting, setPredicting] = useState(false)
   const [predictError, setPredictError] = useState('')
 
-  useEffect(() => {
-    let cancelled = false
-    const controller = new AbortController()
-
+  function requestReload(nextWorkload = workload) {
     setLoading(true)
     setLoadError('')
     setTelemetry(null)
     setPrediction(null)
     setPredictError('')
+
+    if (nextWorkload === workload) {
+      setRefresh((n) => n + 1)
+    } else {
+      setWorkload(nextWorkload)
+    }
+  }
+
+  useEffect(() => {
+    let cancelled = false
+    const controller = new AbortController()
 
     async function load() {
       try {
@@ -111,7 +121,7 @@ export default function App() {
     }
   }, [workload, refresh])
 
-  const rows = telemetry?.samples ?? []
+  const rows = telemetry?.samples ?? EMPTY_ROWS
   const latest = rows.at(-1)
 
   const chartData = useMemo(() => rows.map((row, index) => ({
@@ -224,7 +234,7 @@ export default function App() {
             className="refresh-button"
             type="button"
             disabled={loading}
-            onClick={() => setRefresh((n) => n + 1)}
+            onClick={() => requestReload()}
           >
             <RefreshCw
               size={16}
@@ -239,7 +249,7 @@ export default function App() {
           <select
             id="workload"
             value={workload}
-            onChange={(event) => setWorkload(event.target.value)}
+            onChange={(event) => requestReload(event.target.value)}
           >
             {WORKLOADS.map((item) => (
               <option key={item.value} value={item.value}>
