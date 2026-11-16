@@ -1,13 +1,8 @@
-import { defineConfig } from 'vitest/config'
-import react from '@vitejs/plugin-react'
+import '@testing-library/jest-dom/vitest'
+import { afterEach, vi } from 'vitest'
+import { cleanup } from '@testing-library/react'
 
-export default defineConfig({
-  plugins: [react()],
-
-  test: {
-    environment: 'jsdom',
-    setupFiles: ['./src/setupTests.js'],
-    clearMocks: true,
-    css: true,
-  },
+afterEach(() => {
+  cleanup()
+  vi.unstubAllGlobals()
 })
