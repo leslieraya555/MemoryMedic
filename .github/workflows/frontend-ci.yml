@@ -1,6 +1,7 @@
-# MemoryMedic AI 2.0
-# Frontend continuous integration
-# Validates that the React dashboard builds successfully.
+
+# File: .github/workflows/frontend-ci.yml
+# Project: MemoryMedic AI 2.0
+# Purpose: Test, lint, and build the React dashboard
 
 name: MemoryMedic Dashboard CI
 
@@ -9,13 +10,15 @@ on:
     branches:
       - main
     paths:
-      - 'frontend/**'
-      - '.github/workflows/frontend-ci.yml'
+      - "frontend/**"
+      - ".github/workflows/frontend-ci.yml"
 
   pull_request:
+    branches:
+      - main
     paths:
-      - 'frontend/**'
-      - '.github/workflows/frontend-ci.yml'
+      - "frontend/**"
+      - ".github/workflows/frontend-ci.yml"
 
   workflow_dispatch:
 
@@ -27,8 +30,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  frontend-build:
-    name: React Dashboard Build
+  frontend-build-and-test:
+    name: React Dashboard Verification
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -37,21 +40,52 @@ jobs:
         working-directory: frontend
 
     steps:
+      # Step 1: Download repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # Step 2: Configure Node.js
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: "22"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
+      # Step 3: Display tool versions
+      - name: Verify Node.js and npm
+        run: |
+          node --version
+          npm --version
+
+      # Step 4: Install dependencies
       - name: Install frontend dependencies
         run: npm ci
 
-      - name: Build React application
+      # Step 5: Run static analysis
+      - name: Run frontend lint checks
+        run: npm run lint
+
+      # Step 6: Run automated dashboard tests
+      - name: Run Vitest frontend tests
+        run: npm test
+
+      # Step 7: Compile production dashboard
+      - name: Build React dashboard
         run: npm run build
 
-      - name: Verify build output exists
-        run: test -f dist/index.html
+      # Step 8: Verify generated build
+      - name: Verify production build output
+        run: |
+          test -f dist/index.html
+          test -d dist/assets
+          echo "MemoryMedic dashboard build verified."
+
+      # Step 9: Save production build
+      - name: Upload dashboard build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: memorymedic-dashboard-build
+          path: frontend/dist/
+          retention-days: 7
+          if-no-files-found: error
