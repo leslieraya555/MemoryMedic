@@ -11,3 +11,5 @@ data/collection_*/
 data/cache_*.csv
 data/sedVGWL8W
 .github/ci.yml
+
+data/demo_*/
