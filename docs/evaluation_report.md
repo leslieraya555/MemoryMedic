@@ -978,7 +978,7 @@ The tests stub `fetch` and mock Recharts components. Consequently, they are **fr
 **Run locally from the project root:**
 
 ```bash
-cd frontend
+cd ~/Desktop/MemoryMedic/frontend
 npm ci
 npm test
 npm run lint
@@ -1177,7 +1177,7 @@ From the project root:
 
 ```bash
 
-cd \~/Desktop/MemoryMedic
+cd ~/Desktop/MemoryMedic
 
 PYTHONPATH=. backend/.venv/bin/python -m pytest backend/tests -v
 
@@ -1187,7 +1187,7 @@ PYTHONPATH=. backend/.venv/bin/python -m pytest backend/tests -v
 
 ```bash
 
-cd \~/Desktop/MemoryMedic/frontend
+cd ~/Desktop/MemoryMedic/frontend
 
 npm ci
 
@@ -1195,7 +1195,7 @@ npm run build
 
 ```
 
-### 17.4a Verify Frontend Tests and Lint
+### 17.5 Verify Frontend Tests and Lint
 
 ```bash
 cd ~/Desktop/MemoryMedic/frontend
@@ -1206,21 +1206,15 @@ npm run lint
 
 The four automated frontend tests are not browser-based end-to-end tests. CI runs them before building the production bundle.
 
-### 17.5 Start the API
+### 17.6 Start the API
 
 Only start a new server if port 8001 is available.
 
 ```bash
 
-cd \~/Desktop/MemoryMedic
+cd ~/Desktop/MemoryMedic
 
-backend/.venv/bin/python -m uvicorn backend.app.main:app \\
-
-  --reload \\
-
-  --host 127.0.0.1 \\
-
-  --port 8001
+PYTHONPATH=. backend/.venv/bin/python -m uvicorn backend.app.main:app --reload --host 127.0.0.1 --port 8001
 
 ```
 
@@ -1232,13 +1226,13 @@ The health endpoint is available at:
 
 http://127.0.0.1:8001/health
 
-### 17.6 Start the Frontend
+### 17.7 Start the Frontend
 
 In a separate terminal:
 
 ```bash
 
-cd \~/Desktop/MemoryMedic/frontend
+cd ~/Desktop/MemoryMedic/frontend
 
 npm run dev -- --host 127.0.0.1 --port 5173
 
@@ -1256,7 +1250,7 @@ The checked-in [backend pytest terminal log](memorymedic-terminal-output.txt) re
 
 The following evidence supports the documented project evaluation.
 
-**New November 16 artifact:** The combined test screenshot is documented in [Appendix C](#appendix-c-november-16-2026--local-verification-evidence). It must be committed under `docs/images/` along with this Markdown file for the image to render on GitHub.
+**November 16 verification artifact:** The combined test screenshot is documented in [Appendix C](#appendix-c-november-16-2026--local-verification-evidence). The file `docs/images/memorymedic-full-test-verification.png` has been committed in the repository and is linked below.
 
 | Evidence | Location |
 |---|---|
@@ -1276,8 +1270,8 @@ The following evidence supports the documented project evaluation.
 | CI workflows | `.github/workflows/` |
 | Frontend CI pass screenshot | `docs/images/memorymedic-frontend-ci-passed.png` |
 | Four workload screenshots | `docs/images/memorymedic-*-prediction.png` (see appendix) |
-| Original build screenshot | Combined local verification capture | `docs/images/memorymedic-full-test-verification.png` (local capture; publish with this report) |
-| `docs/images/memorymedic-build-test-training-results.png` |
+| Original build screenshot | `docs/images/memorymedic-build-test-training-results.png` |
+| Combined local verification screenshot | `docs/images/memorymedic-full-test-verification.png` |
 | Historical model evaluations | `artifacts/ml/training_*/evaluation.json` |
 
 ### 18.1 Historical Verification Screenshot
@@ -1298,7 +1292,7 @@ The following screenshot filenames have been verified in the repository's `docs/
 | [`memorymedic-memory-burst-prediction.png`](images/memorymedic-memory-burst-prediction.png) | Memory-burst dashboard and prediction |
 | [`memorymedic-cache-growth-prediction.png`](images/memorymedic-cache-growth-prediction.png) | Cache-growth dashboard and prediction |
 | [`memorymedic-frontend-ci-passed.png`](images/memorymedic-frontend-ci-passed.png) | Successful frontend GitHub Actions verification |
-| [`memorymedic-full-test-verification.png`](images/memorymedic-full-test-verification.png) | November 16 local terminal capture of backend tests, Vitest, lint, and Vite build; link resolves when image is committed |
+| [`memorymedic-full-test-verification.png`](images/memorymedic-full-test-verification.png) | November 16 local terminal capture of backend tests, Vitest, lint, and Vite build; available in the repository |
 
 Additional backend and performance screenshots should be added only after capturing the corresponding evidence. Do not relabel illustrative images as independent benchmark results.
 
@@ -1533,11 +1527,11 @@ Additional independent benchmarking is required before making strong claims abou
 
 ## References and Project Documentation
 
-## Project Repository
+### Project Repository
 
 [MemoryMedic GitHub Repository](https://github.com/leslieraya555/MemoryMedic)
 
-## Source Code
+### Source Code
 
 - [Model Training](../ml/train_model.py)
 
@@ -1555,7 +1549,7 @@ Additional independent benchmarking is required before making strong claims abou
 
 - [Vite Configuration](../frontend/vite.config.js)
 
-## Related Documentation
+### Related Documentation
 
 - [System Architecture](architecture.md)
 
@@ -1563,7 +1557,7 @@ Additional independent benchmarking is required before making strong claims abou
 
 - [Interview Guide](interview_guide.md)
 
-## Continuous Integration
+### Continuous Integration
 
 [MemoryMedic GitHub Actions](https://github.com/leslieraya555/MemoryMedic/actions)
 
@@ -1698,7 +1692,7 @@ npm run build
 
 **Evidence file:** `docs/images/memorymedic-full-test-verification.png`
 
-This screenshot captures the four local command summaries above in one VS Code terminal session. It is a convenient visual audit aid; the underlying commands, terminal outputs, source tests, and CI workflow definitions remain the stronger reproducible evidence. The link will render after the PNG and this report are present together in the repository.
+This screenshot captures the four local command summaries above in one VS Code terminal session. It is a convenient visual audit aid; the underlying commands, terminal outputs, source tests, and CI workflow definitions remain the stronger reproducible evidence. Both the PNG and this report are present in the repository, allowing the image to render in GitHub's Markdown preview.
 
 | Verification | Result in the capture | Interpretation |
 |---|---|---|
