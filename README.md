@@ -1,10 +1,10 @@
 # MemoryMedic AI 2.0
 
-**Linux Process-Memory Monitoring | Machine Learning | FastAPI | React**
+**Linux Process-Memory Monitoring · Machine Learning · FastAPI · React**
 
 **Author:** Leslie Raya  
 **Repository:** [leslieraya555/MemoryMedic](https://github.com/leslieraya555/MemoryMedic)  
-**Project status:** Working research and portfolio prototype; not a production monitoring service.
+**Status:** Working research and software-engineering portfolio prototype — **not production-ready**.
 
 [![MemoryMedic CI](https://github.com/leslieraya555/MemoryMedic/actions/workflows/ci.yml/badge.svg)](https://github.com/leslieraya555/MemoryMedic/actions/workflows/ci.yml)
 [![Backend API CI](https://github.com/leslieraya555/MemoryMedic/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/leslieraya555/MemoryMedic/actions/workflows/backend-ci.yml)
@@ -12,78 +12,103 @@
 
 ## Overview
 
-MemoryMedic is an end-to-end experimental system for collecting Linux process-memory telemetry and identifying patterns associated with potential memory leaks. The original C++ monitor reads Linux `/proc` information, calculates memory-growth indicators, produces a rule-based risk assessment, and exports telemetry to CSV. A Python pipeline validates telemetry, engineers causal time-series features, trains classification models, and performs saved-model inference.
+**MemoryMedic AI 2.0** is an experimental end-to-end system that captures Linux process-memory measurements, engineers time-series features, classifies telemetry associated with potential memory leaks, and presents historical results in an interactive dashboard.
 
-**MemoryMedic AI 2.0** connects the existing machine-learning pipeline to a **FastAPI backend** and **React/Vite dashboard**. Users can choose a historical workload, inspect RSS and virtual-memory charts, review recent measurements, and request an AI prediction.
+Its original **C++17 monitor** reads Linux `/proc` measurements, calculates memory-growth indicators, produces a separate rule-based risk assessment, and records timestamped CSV telemetry. The **Python ML pipeline** validates collections, computes causal features, trains classifiers using independent-run partitions, and saves a model for later inference. A **FastAPI backend** exposes historical telemetry and predictions to a **React/Vite frontend**.
 
-The dashboard currently displays **historical CSV data**; it does **not** stream newly collected process measurements in real time. The model is evaluated on controlled synthetic programs, not general-purpose production applications.
+**Important:** The browser currently displays **historical CSV samples, not a real-time stream from running processes**. Classification scores have not been validated as calibrated probabilities for unfamiliar production applications. The C++ heuristic assessment and the Python ML classifier are separate methods; the C++ executable does not directly load the ML model.
+
+## Contents
+
+- [Dashboard preview](#dashboard-preview)
+- [Implemented features](#implemented-features)
+- [Architecture](#architecture)
+- [Technology stack](#technology-stack)
+- [Repository structure](#repository-structure)
+- [Synthetic workloads](#synthetic-workloads)
+- [Requirements](#requirements)
+- [Run the API and dashboard on macOS](#run-the-api-and-dashboard-on-macos)
+- [Build and collect telemetry on Ubuntu](#build-and-collect-telemetry-on-ubuntu)
+- [Train and evaluate the ML model](#train-and-evaluate-the-ml-model)
+- [API endpoints](#api-endpoints)
+- [Historical benchmark results](#historical-benchmark-results)
+- [Testing and continuous integration](#testing-and-continuous-integration)
+- [Evidence and screenshots](#evidence-and-screenshots)
+- [Troubleshooting](#troubleshooting)
+- [Limitations](#limitations)
+- [Development roadmap](#development-roadmap)
+- [Documentation](#documentation)
 
 ## Dashboard preview
 
+Each image shows a selected **controlled synthetic workload** and its saved-model prediction in the historical dashboard.
+
 ### Normal workload
 
-![Normal workload dashboard and prediction](docs/images/memorymedic-normal-workload-prediction.png)
+![MemoryMedic dashboard: normal workload and prediction](docs/images/memorymedic-normal-workload-prediction.png)
 
 ### Linear memory leak
 
-![Linear memory-leak dashboard and prediction](docs/images/memorymedic-linear-leak-prediction.png)
+![MemoryMedic dashboard: linear memory-leak workload and prediction](docs/images/memorymedic-linear-leak-prediction.png)
 
 ### Memory burst
 
-![Memory-burst dashboard and prediction](docs/images/memorymedic-memory-burst-prediction.png)
+![MemoryMedic dashboard: temporary memory-burst workload and prediction](docs/images/memorymedic-memory-burst-prediction.png)
 
 ### Cache growth
 
-![Cache-growth dashboard and prediction](docs/images/memorymedic-cache-growth-prediction.png)
+![MemoryMedic dashboard: bounded cache-growth workload and prediction](docs/images/memorymedic-cache-growth-prediction.png)
 
-These images are **functional demonstrations on synthetic workloads**, not evidence of reliable detection on unfamiliar production software.
+These captures demonstrate dashboard functionality on selected examples; they are **not** evidence of general-purpose or real-world detection accuracy.
 
-## Features
+## Implemented features
 
-| Component | Implemented capability |
+| Component | What it does |
 | --- | --- |
-| C++ Linux monitor | Reads selected process information from `/proc` and logs measurements |
-| Rule-based memory assessment | Calculates recent memory-growth indicators and reports a heuristic risk category |
-| CSV collector | Records timestamped measurements with run identifiers and labels for controlled workloads |
-| Machine-learning pipeline | Validates input, calculates 12 features, compares candidate classifiers, and saves a trained model |
-| Prediction CLI | Applies a locally trusted saved model to telemetry CSV files |
-| FastAPI service | Provides health, historical telemetry, and prediction endpoints |
-| React dashboard | Displays telemetry cards, charts, source information, and requested ML classifications |
-| Automated verification | C++ tests, Python regression tests, backend tests, frontend build checks, and GitHub Actions |
-
-**Important distinction:** the C++ monitor's rule-based score and the Python ML classifier are separate assessments. The C++ executable does not directly load the Python model. The FastAPI backend connects saved ML inference to the dashboard.
+| Linux process monitor | Reads measurements for one selected PID from the Linux `/proc` filesystem. |
+| Memory analysis | Calculates RSS trends and other memory-growth indicators. |
+| Heuristic risk assessment | Produces a separate rule-based risk classification in the C++ monitor. |
+| CSV telemetry logger | Writes timestamped process measurements and independent run identifiers. |
+| Workload collector | Executes four controlled workloads separately and records individual CSVs and logs. |
+| Strict data validation | Rejects invalid readings and incomplete or inconsistent training collections. |
+| ML pipeline | Engineers 12 numerical features, compares candidate classifiers, and evaluates by independent run. |
+| Saved-model inference | Loads a trusted local model to classify telemetry as `normal` or `leak`. |
+| FastAPI service | Serves health information, historical CSV metrics, and prediction requests. |
+| React dashboard | Displays memory charts, telemetry cards, workload selection, and requested predictions. |
+| Automated testing | Uses CTest, Python `unittest`, backend `pytest`, Vitest, lint, and build checks. |
+| GitHub Actions | Runs configured C++/ML, backend, and frontend verification workflows. |
 
 ## Architecture
 
 ```mermaid
 flowchart TD
-    A[Linux process] --> B[C++ /proc monitor]
+    A[Linux workload or process] --> B[C++ /proc collector]
     B --> C[Rule-based risk assessment]
     B --> D[CSV telemetry]
-    D --> E[Strict validation and feature engineering]
-    E --> F[Training and grouped evaluation]
+    D --> E[Strict validation and causal feature engineering]
+    E --> F[Grouped training, validation and held-out testing]
     F --> G[Saved ML model]
-    D --> H[FastAPI historical metrics API]
-    G --> I[FastAPI prediction API]
+    D --> H[FastAPI historical metrics]
+    G --> I[FastAPI prediction endpoint]
     E --> I
-    H --> J[React dashboard]
+    H --> J[React / Vite dashboard]
     I --> J
 ```
 
-The training and inference paths are related but distinct: training produces the saved model; the prediction API loads an existing model and computes features for the supplied telemetry. Live streaming, automatic remediation, and eBPF collection are **not implemented**.
+**Training and inference are different workflows.** Training creates a saved model. Inference loads that saved model and evaluates supplied telemetry. The dashboard does not directly train models, and the current system does not automatically repair or stop processes.
 
 ## Technology stack
 
-| Layer | Tools |
+| Area | Technologies |
 | --- | --- |
-| Linux monitoring | C++17, Linux `/proc`, CMake |
-| Data processing and ML | Python, pandas, NumPy, scikit-learn, joblib |
-| REST API | FastAPI, Pydantic, Uvicorn |
-| Dashboard | React, JavaScript, Vite, Recharts, Lucide React |
-| Testing | CTest, Python unittest, pytest, frontend build/lint checks |
-| Automation | GitHub Actions |
+| Process monitoring | C++17, Linux `/proc`, CMake, CTest |
+| Data and ML | Python, pandas, NumPy, scikit-learn, joblib |
+| Web API | FastAPI, Pydantic, Uvicorn, pytest |
+| User interface | React, JavaScript, Vite, Recharts, Lucide React |
+| Frontend tests | Vitest, React Testing Library, jsdom, Oxlint |
+| CI | GitHub Actions |
 
-## Repository layout
+## Repository structure
 
 ```text
 MemoryMedic/
@@ -99,76 +124,93 @@ MemoryMedic/
 │   ├── tests/
 │   └── requirements.txt
 ├── data/
-│   └── README.md
+│   ├── README.md
+│   └── *_demo.csv                 # Bundled example CSVs
 ├── docs/
 │   ├── images/
 │   ├── architecture.md
 │   ├── evaluation_report.md
 │   ├── interview_guide.md
+│   ├── memorymedic-terminal-output.txt
 │   └── model_card.md
 ├── frontend/
 │   ├── src/
 │   │   ├── App.jsx
+│   │   ├── App.test.jsx
+│   │   ├── setupTests.js
 │   │   ├── App.css
 │   │   ├── index.css
 │   │   └── main.jsx
 │   ├── package.json
-│   └── vite.config.js
-├── include/memorymedic/
+│   ├── vite.config.js
+│   └── vitest.config.js
+├── include/memorymedic/       # C++ headers
 ├── ml/
 │   ├── feature_engineering.py
 │   ├── train_model.py
 │   ├── predict_csv.py
-│   ├── requirements.txt
-│   └── tests/
+│   ├── tests/
+│   └── requirements.txt
 ├── scripts/
 │   ├── collect_dataset.sh
 │   ├── run_demo.sh
 │   └── verify_fresh_copy.sh
-├── src/
-├── tests/
-├── workloads/
+├── src/                       # C++ implementation
+├── tests/                     # C++ tests
+├── workloads/                 # Four synthetic C++ workloads
 ├── CMakeLists.txt
 ├── README.md
 └── START_HERE.md
 ```
 
-Generated virtual environments, compiled executables, experiment collections, saved models, and temporary logs are local artifacts; they are not all included in a Git clone.
+Generated build files, Python environments, full collection batches, trained models, and logs may exist **only on the machine where they were created**. A clean clone does not automatically contain those artifacts.
 
-## Controlled workloads
+## Synthetic workloads
 
-| Workload key | Expected behavior | Synthetic label |
+| Workload key | Intended behavior | Synthetic label |
 | --- | --- | --- |
-| `normal_workload` | Stable allocation and repeated memory access | `normal` |
-| `burst_workload` | Temporary large allocations that are released | `normal` |
-| `cache_growth` | Gradual growth followed by a bounded cache | `normal` |
-| `linear_leak` | Continuous retained allocation without deletion | `leak` |
+| `normal_workload` | Approximately stable resident memory | `normal` |
+| `burst_workload` | Temporary allocation spikes that are released | `normal` |
+| `cache_growth` | Increasing memory use that eventually stabilizes | `normal` |
+| `linear_leak` | Repeated allocation retained without release | `leak` |
 
-These fixed programs are useful for an initial integration benchmark but do not cover all real-world memory behavior. A rising RSS curve is not, by itself, proof of a leak.
+**Memory growth is not automatically a memory leak.** The project intentionally includes burst and cache examples to illustrate this distinction. The original benchmark contains one synthetic leak implementation, not a diverse catalog of real defects.
 
 ## Requirements
 
-**For the dashboard and API on macOS:** Python and an appropriate virtual environment, Node.js compatible with the project's Vite version (the CI uses Node.js 22), npm, and a locally available trained MemoryMedic model to run predictions.
+**For the API and dashboard on macOS:**
 
-**For C++ telemetry collection and model training:** Linux with `/proc`, CMake 3.20+, a C++17 compiler, Python, and the dependencies listed in `ml/requirements.txt`. You can use an Ubuntu Multipass instance from macOS.
+- Python 3 with virtual-environment support; the dependencies are in `ml/requirements.txt` and `backend/requirements.txt`.
+- Node.js and npm compatible with the checked-in frontend dependencies (frontend CI uses Node.js 22).
+- A local trusted saved model **for prediction requests**, and accessible `data/demo_*` CSVs **for historical dashboard metrics**.
 
-### 1. Clone or open the project
+**For native telemetry collection and training:**
 
-```bash
-git clone https://github.com/leslieraya555/MemoryMedic.git
-cd MemoryMedic
-```
+- Ubuntu or another Linux system exposing `/proc`.
+- CMake 3.20 or newer, a C++17 compiler, Python 3, and the dependencies in `ml/requirements.txt`.
+- Optionally, an existing Ubuntu Multipass instance on macOS.
 
-If you already have the repository locally, **do not clone it again**. Instead, in your Mac terminal:
+## Run the API and dashboard on macOS
+
+### 1. Open the existing repository
+
+If you already cloned the project onto your Desktop, use:
 
 ```bash
 cd ~/Desktop/MemoryMedic
 git status --short
 ```
 
-### 2. Run the FastAPI backend on your Mac
+For a **new** clone instead:
 
-From the repository root, use the existing environment if present:
+```bash
+git clone https://github.com/leslieraya555/MemoryMedic.git
+cd MemoryMedic
+```
+
+### 2. Start the FastAPI backend — terminal 1
+
+In VS Code, open **Terminal > New Terminal** and run:
 
 ```bash
 cd ~/Desktop/MemoryMedic
@@ -177,19 +219,16 @@ backend/.venv/bin/python -m pip install -r ml/requirements.txt -r backend/requir
 PYTHONPATH=. backend/.venv/bin/python -m uvicorn backend.app.main:app --reload --host 127.0.0.1 --port 8001
 ```
 
-Leave this terminal open while using the dashboard.
+Keep this terminal running. The API should be accessible at:
 
-**API URLs:**
+- [Interactive API documentation](http://127.0.0.1:8001/docs)
+- [Health endpoint](http://127.0.0.1:8001/health)
 
-- Swagger documentation: <http://127.0.0.1:8001/docs>
-- Health check: <http://127.0.0.1:8001/health>
-- Example metrics: <http://127.0.0.1:8001/api/v1/metrics?workload=normal_workload&limit=50>
+A successful health response confirms the service is running; it **does not** guarantee that a trained model or usable demonstration CSVs are present.
 
-The health endpoint checks the API process; it does **not** prove that a trained model is present or that all data sources are available.
+### 3. Start the React dashboard — terminal 2
 
-### 3. Run the React dashboard on your Mac
-
-Open a **second terminal**:
+Open another VS Code terminal:
 
 ```bash
 cd ~/Desktop/MemoryMedic/frontend
@@ -197,50 +236,30 @@ npm ci
 npm run dev -- --host 127.0.0.1 --port 5173
 ```
 
-Open <http://127.0.0.1:5173> in your browser.
+Open [http://127.0.0.1:5173](http://127.0.0.1:5173).
 
-The `frontend/vite.config.js` configuration proxies `/health` and `/api` requests to the FastAPI service at port 8001. Keep both servers running. If either port is already in use, check the existing process before starting a duplicate.
+The checked-in `frontend/vite.config.js` proxies `/health` and `/api` to port **8001**. Leave both terminal sessions running while using the dashboard.
 
-### 4. Test the dashboard manually
+### 4. Try the dashboard
 
-1. Confirm the header displays a connected API after the backend responds.
-2. Select each workload from the **Data source** dropdown.
-3. Confirm that the historical telemetry chart and recent measurements load.
-4. Click **Run AI prediction** and inspect the returned classification.
-5. Compare the results with the four screenshots above.
+1. Confirm the header reports that the API is connected.
+2. Use **Data source** to choose `normal_workload`, `linear_leak`, `burst_workload`, or `cache_growth`.
+3. Inspect the RSS/virtual-memory chart and recent measurements.
+4. Press **Run AI prediction** to request the saved classifier's predictions.
+5. Compare the selected demonstration with the screenshots above.
 
-Predictions require a compatible, trusted saved model in `artifacts/ml/training_*/memorymedic_model.joblib`. That model is generated locally by training, not guaranteed to exist in a fresh Git clone. Without it, the prediction endpoint may return HTTP 503 even if `/health` succeeds.
+**Data/model prerequisites:** The metrics API reads the latest matching `data/demo_*/<workload>.csv` file; predictions require a compatible trusted artifact in `artifacts/ml/training_*/memorymedic_model.joblib`. A clean checkout may have neither. If you collected or trained **inside a separate Ubuntu VM**, those files do not automatically appear in the Mac checkout unless that directory is shared or the files are copied into the appropriate local paths.
 
-## Backend API reference
+## Build and collect telemetry on Ubuntu
 
-| Method | Endpoint | Purpose |
-| --- | --- | --- |
-| `GET` | `/` | Basic service information |
-| `GET` | `/health` | API process health response |
-| `GET` | `/api/v1/metrics` | Historical CSV telemetry selected by `workload` and `limit` |
-| `POST` | `/api/v1/predict` | Classify validated telemetry with the saved ML model |
-
-`GET /api/v1/metrics` accepts one of `normal_workload`, `burst_workload`, `cache_growth`, and `linear_leak`, with a `limit` from 1 to 500. It reads the latest matching `data/demo_*/<workload>.csv` file. The prediction endpoint validates measurements, calculates features, and returns model scores and classifications. Swagger documents the exact request schema.
-
-### Quick health and metrics checks
-
-```bash
-curl -sS http://127.0.0.1:8001/health
-curl -sS 'http://127.0.0.1:8001/api/v1/metrics?workload=linear_leak&limit=5'
-```
-
-If the second command returns 404, generate a completed demo CSV in Ubuntu first or provide the expected demo data in your local project.
-
-## Build and test the C++ collector in Ubuntu
-
-From macOS, enter your existing Multipass instance (if it is configured):
+The following C++ collection steps are **Linux-only**. If you already configured a Multipass instance named `memorymedic`, start it from macOS:
 
 ```bash
 multipass start memorymedic
 multipass shell memorymedic
 ```
 
-Inside Ubuntu, go to the repository copy or mounted folder:
+Inside Ubuntu (adjust the path if your clone is elsewhere):
 
 ```bash
 cd /home/ubuntu/MemoryMedic
@@ -252,196 +271,303 @@ ctest --test-dir build --output-on-failure
 ./build/memorymedic --help
 ```
 
-The C++ tests cover the existing analyzer/risk scenarios; passing them does not benchmark real-world leak detection.
-
 ### Run a controlled demonstration
+
+From the Ubuntu repository root after building:
 
 ```bash
 bash scripts/run_demo.sh 25 500 8
 ```
 
-The script generates a timestamped `data/demo_*/` directory containing four workload CSVs and logs. These are historical captures for later review and prediction, not a persistent real-time monitoring service.
+The demonstration generates a uniquely named `data/demo_*/` folder with workload CSVs and logs. This produces **recorded samples**, not a live web stream. See [dataset documentation](data/README.md) for collection details.
 
-### Collect a new training dataset
+### Collect independent training data
 
-Create a Python environment inside Ubuntu if necessary:
+Inside Ubuntu:
 
 ```bash
+cd /home/ubuntu/MemoryMedic
 python3 -m venv "$HOME/memorymedic-ml-venv"
 source "$HOME/memorymedic-ml-venv/bin/activate"
 python -m pip install -r ml/requirements.txt
+bash scripts/collect_dataset.sh 5 40
 ```
 
-Then run:
+`5 40` requests **five independent executions of each of the four workloads**, with a requested duration of 40 seconds per execution. The collector saves original CSVs, a run manifest, logs, and a completion marker. Keep partial/failed collections for inspection, but do not train on them as successful batches.
+
+## Train and evaluate the ML model
+
+With the Ubuntu ML virtual environment activated and completed collection batches available:
 
 ```bash
-bash scripts/collect_dataset.sh 5 40
+cd /home/ubuntu/MemoryMedic
 python ml/train_model.py --check-only
 python ml/train_model.py
 ```
 
-The collector requests **five independent runs per workload** at 40 seconds each. The trainer checks completed collections and assigns whole `run_id` groups to training, validation, and held-out test sets. Each successful training run writes a new directory under `artifacts/ml/` containing the model and evaluation records. Do not overwrite the historical September results when running a new experiment.
+The first command validates data and eligible grouped splits **without training**. The second trains and evaluates the model, saving each successful run to a separate `artifacts/ml/training_*/` directory. Recorded outputs include:
 
-### Verify a fresh published copy
+```text
+artifacts/ml/training_<timestamp>_<id>/
+├── memorymedic_model.joblib
+├── evaluation.json
+├── splits.csv
+├── requirements-used.txt
+└── COMPLETE.txt
+```
 
-The repository provides an isolated Linux verification helper:
+For saved-model CLI inference, select the model generated by your run, then use the repository's prediction script:
+
+```bash
+python ml/predict_csv.py data/linear_leak_demo.csv \
+  --model artifacts/ml/training_<your-run>/memorymedic_model.joblib \
+  --out artifacts/ml/linear-leak-predictions.csv
+```
+
+Replace `training_<your-run>` with the actual generated directory name. Only load trusted model files that you generated or independently verified; joblib files should not be loaded from untrusted sources.
+
+### Reproduce a fresh Linux checkout
+
+The repository includes a helper that clones the published code into an **isolated directory** and saves its own verification logs:
 
 ```bash
 bash scripts/verify_fresh_copy.sh
 ```
 
-For a full fresh-copy collection, training, and prediction check (which generates new datasets), use:
+For the longer check that also collects independent data, trains, and predicts:
 
 ```bash
 bash scripts/verify_fresh_copy.sh --full
 ```
 
-Run these commands **inside Ubuntu**. The script clones the public repository into a separate directory and saves its own logs and artifacts.
+Run these only inside Linux. Keep the generated verification directory and logs if you want to document repeatability.
 
-## Historical model evaluation — September 2026
+## API endpoints
 
-The recorded historical benchmark evaluated 1,243 telemetry observations from **32 independent runs** of four fixed synthetic programs (eight runs per workload).
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/` | Basic API information |
+| `GET` | `/health` | Service liveness |
+| `GET` | `/api/v1/metrics` | Historical telemetry for a selected workload |
+| `POST` | `/api/v1/predict` | Model inference on validated samples |
 
-| Partition | Independent runs | Observations |
+The metrics endpoint accepts `workload` and `limit` parameters. Supported workload values are the four keys in the [Synthetic workloads](#synthetic-workloads) table. Use the interactive FastAPI documentation for the exact prediction request schema.
+
+Check the running service with:
+
+```bash
+curl -sS http://127.0.0.1:8001/health
+curl -sS 'http://127.0.0.1:8001/api/v1/metrics?workload=linear_leak&limit=5'
+```
+
+A `404` metrics response may mean that a matching generated demo CSV is missing. A `503` prediction response may mean that the trusted trained-model artifact is unavailable or cannot be loaded.
+
+## Historical benchmark results
+
+The **September 2026** benchmark consists of **1,243 telemetry observations from 32 independent synthetic executions**, with eight runs of each of four workload programs. To avoid train/test overlap between correlated observations, the split kept all rows from a given `run_id` in one partition.
+
+| Dataset partition | Independent runs | Telemetry observations |
 | --- | ---: | ---: |
 | Training | 24 | 933 |
 | Validation | 4 | 154 |
 | Held-out test | 4 | 156 |
+| **Total** | **32** | **1,243** |
 
-Candidate classifiers included logistic regression and histogram-based gradient boosting. The selected gradient-boosting classifier achieved the strongest validation F1 score.
+Logistic regression and histogram-based gradient boosting were compared using validation F1 score. The historical evaluation selected histogram-based gradient boosting.
 
-| Held-out synthetic metric | Recorded value |
+| Historical held-out synthetic metric | Result |
 | --- | ---: |
 | Accuracy | 100% |
 | Precision | 100% |
 | Recall | 100% |
 | F1 score | 1.000 |
-| True negatives / true positives | 117 / 39 |
-| False positives / false negatives | 0 / 0 |
+| True negatives | 117 |
+| False positives | 0 |
+| False negatives | 0 |
+| True positives | 39 |
 
-**Interpret carefully:** the 156 held-out observations came from just four independent held-out executions of already represented synthetic workload programs. This result does not demonstrate perfect accuracy on unfamiliar applications, calibrated probabilities, or production readiness. A new training run can produce different scores.
+**Interpretation:** The selected model classified all 156 held-out observations correctly **within this controlled benchmark**. Those observations came from four held-out runs of synthetic programs whose workload types were represented in training. These results do not establish perfect detection on unfamiliar processes, calibrated real-world probabilities, or production reliability. New training and test runs may produce different outcomes.
 
-See the [full evaluation report](docs/evaluation_report.md) and [model card](docs/model_card.md) for data-partitioning, metrics, and limitations.
+See the [full evaluation and verification report](docs/evaluation_report.md) and [model card](docs/model_card.md).
 
-## Machine-learning features and data quality
+### Machine-learning features
 
-The model uses 12 numerical features:
+The trained classifier uses 12 numerical features:
 
-| Feature | Interpretation |
+| Feature | Meaning |
 | --- | --- |
-| `rss_kb` | Resident memory |
-| `virtual_memory_kb` | Virtual address-space size |
-| `peak_rss_kb` | Highest recorded RSS |
-| `threads` | Thread count |
-| `rss_growth_kb_s` | Recent RSS growth slope |
+| `rss_kb` | Resident set size |
+| `virtual_memory_kb` | Virtual memory size |
+| `peak_rss_kb` | Peak observed RSS |
+| `threads` | Process thread count |
+| `rss_growth_kb_s` | Resident-memory growth rate |
 | `minor_faults_s` | Minor page-fault rate |
 | `major_faults_s` | Major page-fault rate |
-| `rss_delta` | Change in RSS from preceding sample within a run |
-| `rss_mean_10` | Causal rolling RSS mean over up to 10 observations |
+| `rss_delta` | Change in RSS from the preceding sample |
+| `rss_mean_10` | Causal rolling RSS mean over up to 10 samples |
 | `rss_std_10` | Causal rolling RSS standard deviation |
 | `vm_to_rss_ratio` | Virtual-to-resident memory ratio |
-| `fault_ratio` | Major-fault fraction of all page faults |
+| `fault_ratio` | Fraction of faults that are major page faults |
 
-The validator rejects invalid raw measurements, missing fields, non-finite values, and duplicate timestamps within a run. Rolling features are computed separately for each `run_id` using only current and earlier observations. Labels and run identities are not classifier inputs. Valid data checks are not equivalent to evidence of model generalization.
+The ML pipeline validates raw measurements and isolates rolling features by run. Run IDs and class labels are **not** model-input features. These protections address specific leakage risks but do not prove generalization outside the collected workloads.
 
 ## Testing and continuous integration
 
-### Local backend tests (macOS)
+### Backend API tests (macOS)
+
+From the repository root:
 
 ```bash
 cd ~/Desktop/MemoryMedic
 PYTHONPATH=. backend/.venv/bin/python -m pytest backend/tests -v
 ```
 
-The documented local integration verification recorded **13 passing backend tests**.
+**Recorded November 16, 2026 local result:** 13 backend tests passed, with one non-failing deprecation warning.
 
-### Frontend build and lint (macOS)
+### Frontend component tests, lint, and build (macOS)
+
+From the frontend directory:
 
 ```bash
 cd ~/Desktop/MemoryMedic/frontend
 npm ci
-npm run build
+npm test
 npm run lint
+npm run build
 ```
 
-The frontend repository has build and lint scripts. **It does not currently include a dedicated automated React component-test suite.** That is a recommended next step.
+**Recorded November 16, 2026 local result:** 4 Vitest component tests passed; lint reported zero warnings and zero errors; the Vite production build succeeded. A bundle-size advisory was non-failing.
 
-### Original Python model regression tests (Ubuntu or compatible Python environment)
+The **existing** `frontend/src/App.test.jsx` uses Vitest and React Testing Library, including mocked API responses. Its tests cover:
+
+1. Loading the dashboard and historical telemetry.
+2. Switching to the linear-leak workload.
+3. Requesting and displaying an AI prediction.
+4. Showing a backend error message.
+
+These are **component tests with mocks**, not real-browser end-to-end tests against a running backend. Browser integration testing remains future work.
+
+### Original Python ML regression tests (Ubuntu or compatible Python environment)
+
+With ML dependencies installed:
 
 ```bash
+cd /home/ubuntu/MemoryMedic
 python -m unittest discover -s ml/tests -p 'test_*.py' -v
 ```
 
 The recorded original Python regression suite contains **21 tests**.
 
-### GitHub Actions workflows
+### C++ tests (Ubuntu)
 
-- [MemoryMedic CI](https://github.com/leslieraya555/MemoryMedic/actions/workflows/ci.yml): C++ build/CTest, Python regression checks, and shell script syntax.
-- [Backend API CI](https://github.com/leslieraya555/MemoryMedic/actions/workflows/backend-ci.yml): FastAPI backend tests and Python syntax.
-- [Dashboard CI](https://github.com/leslieraya555/MemoryMedic/actions/workflows/frontend-ci.yml): React dependency install, production build, and build-file verification.
+```bash
+cd /home/ubuntu/MemoryMedic
+cmake -S . -B build -DBUILD_TESTING=ON
+cmake --build build --parallel 2
+ctest --test-dir build --output-on-failure
+```
 
-Check [all GitHub Actions runs](https://github.com/leslieraya555/MemoryMedic/actions) for the status of the exact commit you want to publish. A green build verifies its configured checks, not production memory-leak reliability.
+### GitHub Actions
 
-### Existing evidence
+| Workflow | Configured checks |
+| --- | --- |
+| [MemoryMedic CI](https://github.com/leslieraya555/MemoryMedic/actions/workflows/ci.yml) | C++ build and CTest, ML regression tests, sample validation, and shell syntax. |
+| [Backend API CI](https://github.com/leslieraya555/MemoryMedic/actions/workflows/backend-ci.yml) | Python syntax checks and backend pytest. |
+| [Dashboard CI](https://github.com/leslieraya555/MemoryMedic/actions/workflows/frontend-ci.yml) | npm installation, frontend lint, Vitest, production build, and output verification. |
 
-![Historical C++ build, tests, and ML training evidence](docs/images/memorymedic-build-test-training-results.png)
+Check [the Actions page](https://github.com/leslieraya555/MemoryMedic/actions) for the actual status of the commit you want to present. A green CI run establishes only that the **configured checks** passed for that commit.
 
-The more recent backend tests and four-workload dashboard screenshots are documented separately in the [evaluation report](docs/evaluation_report.md). A saved backend test log is available at [docs/memorymedic-terminal-output.txt](docs/memorymedic-terminal-output.txt).
+## Evidence and screenshots
+
+The repository includes these screenshots in [`docs/images/`](docs/images/):
+
+| File | Evidence |
+| --- | --- |
+| [`memorymedic-build-test-training-results.png`](docs/images/memorymedic-build-test-training-results.png) | Historical build, test, and training demonstration |
+| [`memorymedic-normal-workload-prediction.png`](docs/images/memorymedic-normal-workload-prediction.png) | Normal-workload dashboard and prediction |
+| [`memorymedic-linear-leak-prediction.png`](docs/images/memorymedic-linear-leak-prediction.png) | Linear-leak dashboard and prediction |
+| [`memorymedic-memory-burst-prediction.png`](docs/images/memorymedic-memory-burst-prediction.png) | Burst-workload dashboard and prediction |
+| [`memorymedic-cache-growth-prediction.png`](docs/images/memorymedic-cache-growth-prediction.png) | Cache-growth dashboard and prediction |
+| [`memorymedic-frontend-ci-passed.png`](docs/images/memorymedic-frontend-ci-passed.png) | Successful frontend CI run |
+| [`memorymedic-full-test-verification.png`](docs/images/memorymedic-full-test-verification.png) | Combined local backend/frontend verification |
+
+![Combined local verification screenshot](docs/images/memorymedic-full-test-verification.png)
+
+The checked-in [backend terminal test log](docs/memorymedic-terminal-output.txt) and [evaluation report](docs/evaluation_report.md) provide additional context. Screenshots demonstrate specific observed checks; they are **not substitutes** for independent performance benchmarks or complete reproduction records.
 
 ## Troubleshooting
 
-| Issue | Recommended check |
+| Issue | Suggested action |
 | --- | --- |
-| `Port 5173 is already in use` | A Vite process may already be running; inspect `lsof -nP -iTCP:5173 -sTCP:LISTEN` on your Mac before starting another. |
-| `Port 8001 is already in use` | Inspect `lsof -nP -iTCP:8001 -sTCP:LISTEN`; reuse or stop the existing API. |
-| API health works but prediction fails with 503 | Confirm `artifacts/ml/training_*/memorymedic_model.joblib` exists and matches the environment and feature schema. |
-| Metrics endpoint returns 404 | Generate a `data/demo_*/<workload>.csv` file for the requested workload. |
-| Dashboard shows API disconnected | Start the FastAPI server on port 8001 and check Vite's proxy configuration. |
-| `/proc` access fails on macOS | Perform C++ collection inside Ubuntu/Linux; `/proc` is a Linux interface. |
-| `npm` says `package.json` cannot be found | Run npm commands from the `frontend/` directory, not the project root. |
-| `git push` says everything is up to date | Save the edited README, review `git status`, stage the specific file, commit, and push. |
+| Port 5173 is in use | On macOS run `lsof -nP -iTCP:5173 -sTCP:LISTEN`; check whether Vite is already running. |
+| Port 8001 is in use | Run `lsof -nP -iTCP:8001 -sTCP:LISTEN`; reuse or stop the existing API. |
+| API shows disconnected | Verify that the FastAPI terminal is running and that Vite proxies `/health` and `/api` to port 8001. |
+| Metrics request returns 404 | Check for the expected local `data/demo_*/<workload>.csv` file. |
+| Prediction returns 503 | Check for a compatible, trusted `artifacts/ml/training_*/memorymedic_model.joblib` file. |
+| `/proc` isn't available on macOS | Run native collector and workload programs inside Ubuntu/Linux. |
+| `npm` cannot locate `package.json` | Change directory to `frontend/` first. |
+| `npm test` reports no tests | Verify `frontend/src/App.test.jsx`, `frontend/vitest.config.js`, and `frontend/src/setupTests.js`. |
+| A screenshot does not render on GitHub | Verify filename spelling and whether the file is committed under `docs/images/`. |
+| `git push` says everything is up to date | Save files, check `git status --short`, stage selected files, commit, and then push. |
 
-## Known limitations
+## Limitations
 
-1. The benchmark contains one synthetic leak implementation and three normal workload implementations, not a representative selection of production software.
-2. Dashboard charts display the latest matching historical CSV data, not live telemetry streams.
-3. The model's output scores have not been demonstrated to be calibrated probabilities for production processes.
-4. Benchmark rows within each process run are correlated; the number of independent test runs is much smaller than the number of observations.
-5. Detection latency, false alerts per monitoring hour, and monitoring resource overhead have not been comprehensively benchmarked.
-6. Automatic remediation, multi-host deployment, eBPF collection, and alert delivery are not implemented.
-7. Model inference depends on an existing trusted local joblib artifact and compatible Python/scikit-learn environment.
+1. The historical evaluation contains four controlled synthetic workload implementations, including only one leak-style program.
+2. The dashboard uses completed historical CSV files; it does **not** provide live process streaming.
+3. The relatively small number of independent test runs limits the strength of statistical conclusions.
+4. Real-world false-positive rates, detection latency, and monitoring overhead have not been comprehensively measured.
+5. The classifier's output scores have not been validated as calibrated probabilities for production applications.
+6. Separate Ubuntu and Mac checkouts do not automatically share generated artifacts.
+7. Automatic remediation, multi-host deployment, eBPF collection, and production alert delivery are not implemented.
+8. Saved-model inference depends on a compatible environment and a locally trusted model artifact.
 
-## Roadmap
+## Development roadmap
 
-- [x] Implement Linux process-memory collector in C++.
-- [x] Add four synthetic workload programs and CSV collection.
-- [x] Validate telemetry and train an ML classifier with grouped partitions.
-- [x] Build the FastAPI metrics and prediction service.
-- [x] Build the React historical monitoring dashboard.
-- [x] Add backend tests and configured GitHub Actions build checks.
-- [x] Record and link screenshots for the four controlled workloads.
-- [ ] Add automated React component and browser integration tests.
-- [ ] Benchmark unfamiliar workloads, false alarms, and detection latency.
-- [ ] Measure collection overhead and run-to-run performance variation.
-- [ ] Evaluate probability calibration and grouped cross-validation.
-- [ ] Add genuinely live process telemetry streaming.
-- [ ] Evaluate an approved staging alerting/deployment architecture.
+### Completed or documented
 
-**Checked items reflect implemented or recorded project functionality, not a claim that all requirements for production deployment have been met.**
+- [x] C++ Linux `/proc` monitor and telemetry logger.
+- [x] Four controlled synthetic workload programs.
+- [x] Independent collection and strict CSV validation.
+- [x] Causal feature engineering and grouped model evaluation.
+- [x] Saved-model classification and CLI inference.
+- [x] FastAPI historical metrics and prediction endpoints.
+- [x] React dashboard with workload dropdown and memory charts.
+- [x] Backend pytest tests and automated frontend Vitest component tests.
+- [x] Frontend lint and production-build verification.
+- [x] GitHub Actions workflows and documented verification screenshots.
+- [x] Historical evaluation report and model limitations.
 
-## Project documentation
+### Next priorities
 
-- [Evaluation and verification report](docs/evaluation_report.md)
-- [Architecture](docs/architecture.md)
-- [Model card](docs/model_card.md)
+- [x] Correct the README test status so it reflects the implemented Vitest component suite.
+- [ ] Run and record real-browser end-to-end integration tests against a running API.
+- [ ] Evaluate previously unseen application and memory-allocation behaviors.
+- [ ] Measure false positives, false alerts per hour, and detection latency across independent runs.
+- [ ] Benchmark monitoring CPU/memory overhead and repeatability.
+- [ ] Evaluate probability calibration and, if needed, grouped cross-validation with a separate final test set.
+- [ ] Publish a concise portfolio demonstration and a reproducible versioned release.
+
+### Optional future platform features
+
+- [ ] Stream genuinely live Linux telemetry to the dashboard.
+- [ ] Add configurable alerts and multi-process monitoring.
+- [ ] Investigate eBPF instrumentation, deployment hardening, and multi-host architecture.
+
+**Roadmap entries describe future work, not completed functionality.** The research prototype should not be used as the sole basis for stopping or modifying production services.
+
+## Documentation
+
+- [Full evaluation and verification report](docs/evaluation_report.md)
+- [System architecture](docs/architecture.md)
+- [Model card and model-use limitations](docs/model_card.md)
 - [Interview preparation guide](docs/interview_guide.md)
-- [Dataset documentation](data/README.md)
-- [Repository setup and verification guide](START_HERE.md)
-- [GitHub repository](https://github.com/leslieraya555/MemoryMedic)
+- [Dataset and collection guide](data/README.md)
+- [Getting-started guide](START_HERE.md)
+- [Saved backend test output](docs/memorymedic-terminal-output.txt)
+- [GitHub Actions](https://github.com/leslieraya555/MemoryMedic/actions)
 
-## Author
+## Author and project scope
 
-**Leslie Raya**  
-[GitHub](https://github.com/leslieraya555) · [MemoryMedic repository](https://github.com/leslieraya555/MemoryMedic)
+**Leslie Raya** — [GitHub profile](https://github.com/leslieraya555) · [MemoryMedic repository](https://github.com/leslieraya555/MemoryMedic)
 
-This project is intended for education, research, software-engineering demonstrations, and further experimentation. Its results should not be used as the sole basis for production process-remediation decisions.
+MemoryMedic is intended for education, research, portfolio demonstration, and further experimentation. The recorded results support the stated synthetic benchmark and selected software-verification checks, **not** claims of production reliability or general-purpose leak detection.
