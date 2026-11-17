@@ -1,1148 +1,999 @@
+
 # MemoryMedic AI 2.0 — Evaluation and Verification Report
 
-**Author:** Leslie Raya
-
-**Project:** MemoryMedic / MemoryMedic AI 2.0
-
-**Report Updated:** November 16, 2026
-
-**Historical Model Benchmark:** September 2026
-
-**Software Verification:** October 23–November 16, 2026
-
+**Author:** Leslie Raya  
+**Project:** MemoryMedic / MemoryMedic AI 2.0  
+**Last Updated:** November 16, 2026  
+**Historical Model Benchmark:** September 2026  
+**Software Verification:** October–November 2026  
+**Status:** Research and portfolio prototype  
 **Repository:** [MemoryMedic on GitHub](https://github.com/leslieraya555/MemoryMedic)
 
 ---
 
 ## Executive Summary
 
-MemoryMedic is a Linux-based process-memory monitoring and machine-learning system designed to detect patterns associated with abnormal memory growth and potential memory leaks.
+MemoryMedic AI 2.0 is an experimental Linux process-memory monitoring and machine-learning system designed to identify patterns associated with abnormal memory growth and potential memory leaks.
 
-The project integrates:
+The system integrates:
 
-- C++ process monitoring and Linux `/proc` telemetry.
-
+- A C++ Linux process-memory monitoring application.
+- Memory statistics collected from the Linux `/proc` filesystem.
 - Automated telemetry collection and CSV validation.
+- Python feature engineering and machine-learning classification.
+- Grouped training, validation, and held-out testing.
+- Saved-model inference.
+- A FastAPI backend for telemetry and prediction requests.
+- A React/Vite dashboard for visualization and classification.
+- Automated tests and GitHub Actions continuous integration.
 
-- Python feature engineering and supervised machine learning.
-
-- Model training, evaluation, and serialized model persistence.
-
-- A FastAPI backend with historical telemetry and prediction endpoints.
-
-- A React dashboard with memory visualization and AI predictions.
-
-- Automated testing and GitHub Actions continuous integration.
-
-MemoryMedic AI 2.0 builds on the original C++ monitoring and machine-learning pipeline by adding an interactive API and dashboard.
+MemoryMedic AI 2.0 builds upon the original C++ monitoring system by introducing a web-based interface for examining recorded telemetry and requesting machine-learning predictions.
 
 ### Key Verified Results
 
-| Component | Result |
+| Component | Recorded Result |
 |---|---|
-| Historical dataset | 1,243 telemetry observations |
+| Historical telemetry observations | 1,243 |
 | Independent monitoring runs | 32 |
-| Synthetic workload types | 4 |
+| Synthetic workload implementations | 4 |
 | Training runs | 24 |
 | Validation runs | 4 |
 | Held-out test runs | 4 |
-| Selected ML model | Histogram-based gradient boosting |
+| Selected classifier | Histogram-based gradient boosting |
 | Historical held-out accuracy | 100% |
 | Historical held-out precision | 100% |
 | Historical held-out recall | 100% |
 | Historical held-out F1-score | 1.000 |
 | Original Python regression tests | 21 passed |
-| MemoryMedic AI 2.0 backend tests | 13 passed |
-| React component tests (Vitest) | 4 passed in the recorded local run |
-| Frontend lint (Oxlint) | Passed in the recorded local run |
+| FastAPI backend tests | 13 passed |
+| React/Vitest tests | 4 passed |
+| Frontend lint | Passed |
 | Frontend production build | Successful |
-| API prediction demonstration | Successful |
-| GitHub Actions | Successful configured checks observed, including updated Dashboard CI |
+| Local API demonstration | Successful |
+| GitHub Actions | Successful configured checks observed |
 
-**Overall assessment:** MemoryMedic AI 2.0 is a functioning research and portfolio prototype with verified components and an integrated monitoring dashboard.
+### Overall Assessment
 
-The newer React tests use mocked API responses in a jsdom test environment. They verify selected UI behavior, not real browser end-to-end interactions or machine-learning accuracy.
+MemoryMedic AI 2.0 demonstrates a functioning, modular software prototype that combines Linux systems programming, feature engineering, machine learning, backend development, frontend development, and software verification.
 
-The perfect historical classification results apply only to the controlled synthetic test dataset. They should not be interpreted as proof of perfect memory-leak detection in unfamiliar production software.
+The historical classifier correctly classified all 156 observations in its held-out synthetic test partition.
+
+However, this performance applies to a limited set of controlled synthetic workloads. It does not establish equivalent accuracy on unfamiliar or production applications.
+
+The recorded frontend tests use mocked API responses and verify component behavior rather than live browser end-to-end functionality.
+
+Additional independent benchmarking is required before making claims about general-purpose memory-leak detection, production reliability, or calibrated risk probabilities.
 
 ---
 
-## 1. Evaluation Objectives
+# 1. Evaluation Objectives
 
-The primary objective of this evaluation is to assess the correctness, performance, reproducibility, and integration of the MemoryMedic system.
+The primary objective of this evaluation is to assess the functionality, correctness, reproducibility, and integration of MemoryMedic AI 2.0.
 
-The evaluation addresses five questions:
+The evaluation addresses the following questions:
 
-1. Can MemoryMedic collect and validate Linux process-memory telemetry?
+1. Can MemoryMedic collect Linux process-memory telemetry?
+2. Can the collected measurements be validated and transformed into machine-learning features?
+3. Can a supervised classifier distinguish the included synthetic leak behavior from normal memory-use behaviors?
+4. Can the trained model be saved and loaded for subsequent inference?
+5. Can the FastAPI backend retrieve telemetry and generate predictions?
+6. Can the React dashboard visualize historical measurements and display classifier outputs?
+7. Can automated software tests verify the implemented components?
+8. Can GitHub Actions reproduce the configured software checks?
 
-2. Can its machine-learning classifier distinguish normal memory behaviors from the included synthetic leak behavior?
+### Evaluation Categories
 
-3. Can the FastAPI backend load the trained model and return predictions?
+The evaluation separates three categories of evidence.
 
-4. Can the React dashboard retrieve telemetry, visualize memory behavior, and display model predictions?
+**Machine-learning evaluation**
 
-5. Can the system's components be tested automatically and verified through GitHub Actions?
+Measures classifier behavior on controlled training, validation, and held-out test partitions.
 
-The evaluation separates **machine-learning performance** from **software functionality**.
+**Software verification**
 
-Successful software tests demonstrate that implemented components behave as expected under tested conditions. They do not independently establish the accuracy of a trained machine-learning model.
+Confirms that individual components and interfaces behave as expected under tested conditions.
 
-## 2. System Architecture
+**Integration demonstrations**
 
-MemoryMedic follows a modular architecture separating operating-system monitoring, feature engineering, machine learning, API services, and frontend visualization.
+Demonstrate how the dashboard, API, and saved model interact using selected synthetic workloads.
 
-### 2.1 High-Level Architecture
+These categories must not be treated as interchangeable evidence.
+
+A successful software test does not independently establish machine-learning accuracy.
+
+---
+
+# 2. System Architecture
+
+MemoryMedic uses a modular architecture separating process monitoring, feature engineering, model training, inference, and visualization.
+
+## 2.1 High-Level Architecture
 
 ```text
-
-              MEMORYMEDIC AI 2.0
-
-           Process Intelligence System
-
-                 Linux Process
-
-                       |
-
-                       v
-
-              Linux /proc Filesystem
-
-                       |
-
-                       v
-
-                C++ ProcReader
-
-                       |
-
-                       v
-
-               MemoryAnalyzer
-
-                       |
-
-             +---------+---------+
-
-             |                   |
-
-             v                   v
-
-       RiskAssessment      TelemetryLogger
-
-             |                   |
-
-             v                   v
-
-       Risk Information       CSV Dataset
-
-                                 |
-
-                                 v
-
-                         Data Validation
-
-                                 |
-
-                                 v
-
-                       Feature Engineering
-
-                                 |
-
-                                 v
-
-                         Model Training
-
-                                 |
-
-                      +----------+----------+
-
-                      |                     |
-
-                      v                     v
-
-                Evaluation Results    Saved ML Model
-
-                                            |
-
-                                            v
-
-                                       FastAPI
-
-                                            ^
-
-                                            |
-
-                            +---------------+--------------+
-
-                            |                              |
-
-                            v                              v
-
-                     Telemetry API                   Prediction API
-
-                            ^                              ^
-
-                            |                              |
-
-                            +---------------+--------------+
-
-                                            |
-
-                                            v
-
-                                    React Dashboard
-
-                                            |
-
-                      +---------------------+----------------+
-
-                      |                     |                |
-
-                      v                     v                v
-
-                 Memory Charts       AI Predictions     System Status
-
+                  MemoryMedic AI 2.0
+                           |
+                           v
+                    Linux Process
+                           |
+                           v
+                    Linux /proc
+                           |
+                           v
+                     ProcReader
+                           |
+                           v
+                    MemoryAnalyzer
+                           |
+                  +--------+--------+
+                  |                 |
+                  v                 v
+            RiskAssessment    TelemetryLogger
+                  |                 |
+                  v                 v
+            Heuristic Risk       CSV Data
+                                    |
+                                    v
+                              Data Validation
+                                    |
+                                    v
+                             Feature Engineering
+                                    |
+                                    v
+                               ML Training
+                                    |
+                         +----------+----------+
+                         |                     |
+                         v                     v
+                  Model Evaluation       Saved Model
+                                               |
+                                               v
+                                         FastAPI Backend
+                                               |
+                                    +----------+----------+
+                                    |                     |
+                                    v                     v
+                               Metrics API          Prediction API
+                                    |                     |
+                                    +----------+----------+
+                                               |
+                                               v
+                                         React Dashboard
+                                               |
+                                    +----------+----------+
+                                    |          |          |
+                                    v          v          v
+                                  Charts    Predictions  Status
 ```
 
-### 2.2 Architectural Responsibilities
+## 2.2 Component Responsibilities
 
 | Component | Responsibility |
 |---|---|
-| Linux `/proc` | Provides process-memory statistics |
-| `ProcReader` | Reads memory and process measurements |
+| Linux `/proc` | Supplies process statistics |
+| `ProcReader` | Reads process measurements |
 | `MemoryAnalyzer` | Calculates memory-growth behavior |
-| `RiskAssessment` | Produces rule-based risk information |
-| `TelemetryLogger` | Records measurements to CSV |
-| `feature_engineering.py` | Validates telemetry and creates ML features |
+| `RiskAssessment` | Produces heuristic risk information |
+| `TelemetryLogger` | Records telemetry to CSV |
+| `feature_engineering.py` | Creates model features |
 | `train_model.py` | Trains and evaluates classifiers |
-| `predict_csv.py` | Performs offline inference on telemetry |
-| FastAPI | Exposes telemetry and prediction endpoints |
-| React | Provides the graphical dashboard |
+| `predict_csv.py` | Performs offline inference |
+| FastAPI | Provides telemetry and prediction endpoints |
+| React | Displays the monitoring dashboard |
 | Recharts | Visualizes historical measurements |
-| GitHub Actions | Automates configured validation workflows |
+| GitHub Actions | Runs configured automated checks |
 
-The original monitoring component operates on Linux.
+The C++ rule-based risk assessment and Python machine-learning classifier are separate systems.
 
-The current React dashboard displays collected historical CSV measurements rather than continuously streaming live measurements from arbitrary processes.
+The original C++ monitor does not directly load the Python classifier.
 
-## 3. Dataset and Experimental Design
+The current dashboard displays historical telemetry rather than streaming newly collected process measurements in real time.
 
-### 3.1 Synthetic Workload Categories
+---
 
-The historical benchmark uses four controlled workloads.
+# 3. Dataset and Experimental Design
 
-| Workload | Behavior | Label | Independent Runs |
+## 3.1 Synthetic Workloads
+
+The historical benchmark contains four controlled workload implementations.
+
+| Workload | Memory Behavior | Label | Independent Runs |
 |---|---|---|---:|
-| `normal_workload` | Maintains approximately 64 MiB of memory | Normal | 8 |
-| `burst_workload` | Temporarily allocates approximately 256 MiB and releases it | Normal | 8 |
-| `cache_growth` | Adds sixteen approximately 8 MiB cache entries before stabilizing | Normal | 8 |
-| `linear_leak` | Retains approximately 1 MiB every 500 ms | Leak | 8 |
+| `normal_workload` | Approximately stable memory allocation | Normal | 8 |
+| `burst_workload` | Temporary large allocation followed by release | Normal | 8 |
+| `cache_growth` | Bounded cache growth followed by stabilization | Normal | 8 |
+| `linear_leak` | Sustained unreleased memory allocation | Leak | 8 |
 | **Total** | | | **32** |
 
-The normal, burst, and cache workloads provide examples of legitimate memory behavior.
+The normal workload maintains approximately 64 MiB.
 
-The linear leak workload provides a controlled positive example of sustained memory retention.
+The memory-burst workload temporarily allocates approximately 256 MiB.
 
-These workloads are useful for prototype validation because their intended behavior is known.
+The cache-growth workload adds sixteen approximately 8 MiB entries before stabilizing.
 
-However, they do not cover every memory-allocation pattern found in production applications.
+The linear-leak workload retains approximately 1 MiB every 500 milliseconds.
 
-### 3.2 Dataset Summary
+These workloads provide controlled examples of different memory-use patterns.
 
-| Property | Recorded Value |
+## 3.2 Dataset Summary
+
+| Property | Value |
 |---|---:|
-| Total telemetry observations | 1,243 |
-| Total independent executions | 32 |
+| Total observations | 1,243 |
+| Independent executions | 32 |
 | Workload implementations | 4 |
-| Normal workload implementations | 3 |
-| Leak workload implementations | 1 |
+| Normal workload types | 3 |
+| Leak workload types | 1 |
 | Runs per implementation | 8 |
 
-Each monitoring execution has a unique `run_id`.
+Each execution is assigned a `run_id`.
 
-Measurements from the same execution are treated as a group during dataset partitioning.
+Run identifiers support reproducible partitioning and prevent observations from the same execution from appearing in multiple dataset partitions.
 
-### 3.3 Dataset Structure
+## 3.3 Dataset Limitations
 
-Collected datasets are organized into completed collection directories.
+The dataset contains only four synthetic programs.
 
-```text
+Three represent normal behavior and one represents a controlled memory leak.
 
-data/
+These examples do not cover the complete range of allocation patterns in real applications.
 
-└── collection_<identifier>/
+The original benchmark also does not independently evaluate generalization to completely unseen application implementations.
 
-    ├── raw/
+---
 
-    │   ├── workload_run_01.csv
+# 4. Data Collection and Validation
 
-    │   ├── workload_run_02.csv
-
-    │   └── ...
-
-    ├── logs/
-
-    ├── runs.csv
-
-    └── COMPLETE.txt
-
-```
-
-The directory shown above illustrates the structure. Actual generated filenames depend on the collection.
-
-The collection manifest records information such as run identities, workload labels, sample counts, and durations.
-
-The completion marker identifies a successfully completed collection batch.
-
-## 4. Data Collection and Validation
-
-### 4.1 Collected Telemetry
+## 4.1 Telemetry Measurements
 
 MemoryMedic collects measurements from Linux process statistics.
 
-Important measurements include:
-
 | Measurement | Description |
 |---|---|
-| `timestamp_ms` | Measurement timestamp |
-| `rss_kb` | Resident memory in kilobytes |
-| `virtual_memory_kb` | Virtual memory in kilobytes |
+| `timestamp_ms` | Observation timestamp |
+| `rss_kb` | Resident memory |
+| `virtual_memory_kb` | Virtual-memory size |
 | `peak_rss_kb` | Peak resident memory |
-| `threads` | Number of threads |
-| `rss_growth_kb_s` | Estimated RSS growth rate |
+| `threads` | Thread count |
+| `rss_growth_kb_s` | Estimated resident-memory growth rate |
 | `minor_faults_s` | Minor page-fault rate |
 | `major_faults_s` | Major page-fault rate |
-| `run_id` | Monitoring execution identifier |
+| `run_id` | Independent execution identifier |
 
-These measurements provide inputs for subsequent feature engineering.
+These measurements are recorded in CSV files for subsequent processing.
 
-### 4.2 Data Validation
+## 4.2 Data Validation
 
-The validation pipeline checks for:
+The validation process checks for problems including:
 
 - Missing required columns.
-
 - Duplicate column names.
+- Invalid numerical values.
+- Non-finite measurements.
+- Invalid memory or thread counts.
+- Missing run identifiers.
+- Duplicate timestamps within the same run.
+- Inconsistent workload labels.
+- Incomplete collection records.
+- Invalid collection metadata.
 
-- Invalid or non-finite numerical values.
+Malformed measurements are rejected instead of being silently replaced with arbitrary values.
 
-- Missing or blank run identifiers.
+## 4.3 Recorded Outcome
 
-- Duplicate timestamps within a run.
+The historical benchmark produced a validated dataset containing:
 
-- Invalid memory and thread measurements.
+- 1,243 observations.
+- 32 independent runs.
+- Four synthetic workload implementations.
 
-- Inconsistent labels and run identities.
+The validated dataset was used for subsequent feature engineering and model evaluation.
 
-- Collection-manifest inconsistencies.
+---
 
-- Invalid durations or incomplete collections.
+# 5. Feature Engineering
 
-Invalid raw measurements are rejected rather than silently replaced with arbitrary values.
+MemoryMedic uses causal, per-run feature engineering.
 
-This protects the model from certain forms of malformed telemetry and helps preserve the integrity of the original measurements.
+Features are calculated using the current observation and preceding observations from the same monitoring run.
 
-**Result:** The historical training pipeline produced a validated dataset containing 1,243 observations from 32 independent monitoring runs.
+## 5.1 Model Features
 
-## 5. Feature Engineering
-
-MemoryMedic uses a causal feature-engineering pipeline.
-
-Features are calculated using the current observation and preceding observations from the same run.
-
-The feature schema is:
-
-`2-strict-per-run`
-
-### 5.1 Model Features
-
-The classifier uses 12 numerical features.
+The classifier uses twelve numerical features.
 
 | Feature | Description |
 |---|---|
-| `rss_kb` | Current resident memory |
-| `virtual_memory_kb` | Current virtual-memory size |
+| `rss_kb` | Resident-memory size |
+| `virtual_memory_kb` | Virtual-memory size |
 | `peak_rss_kb` | Peak resident memory |
-| `threads` | Active thread count |
-| `rss_growth_kb_s` | Recent estimated RSS growth rate |
+| `threads` | Thread count |
+| `rss_growth_kb_s` | Estimated RSS growth rate |
 | `minor_faults_s` | Minor page-fault rate |
 | `major_faults_s` | Major page-fault rate |
-| `rss_delta` | Change in RSS since previous observation |
-| `rss_mean_10` | Rolling RSS average over up to ten observations |
-| `rss_std_10` | Rolling RSS sample standard deviation |
+| `rss_delta` | Change in RSS |
+| `rss_mean_10` | Rolling RSS mean |
+| `rss_std_10` | Rolling RSS standard deviation |
 | `vm_to_rss_ratio` | Virtual-to-resident memory ratio |
-| `fault_ratio` | Major-fault rate divided by total fault rate |
+| `fault_ratio` | Major page-fault ratio |
 
-### 5.2 Feature Calculation
+## 5.2 Derived Features
 
-For each run, observations are sorted by timestamp.
-
-The model then calculates derived features.
-
-Examples include:
-
-**RSS difference**
+RSS difference:
 
 ```text
-
-rss_delta =
-
-    current_rss - previous_rss
-
+rss_delta = current_rss - previous_rss
 ```
 
-**Virtual-to-resident memory ratio**
+Virtual-to-resident memory ratio:
 
 ```text
-
-vm_to_rss_ratio =
-
-    virtual_memory_kb / rss_kb
-
+vm_to_rss_ratio = virtual_memory_kb / rss_kb
 ```
 
-**Page-fault ratio**
+Major page-fault ratio:
 
 ```text
-
 fault_ratio =
-
     major_faults_s /
-
     (minor_faults_s + major_faults_s)
-
 ```
 
-When total page-fault activity is zero, the defined derived ratio is zero.
+When the denominator of the fault ratio is zero, the defined ratio is zero.
 
-Rolling calculations use up to ten observations, not necessarily ten seconds of data.
+Rolling statistics use up to ten observations from the same execution.
 
-### 5.3 Data Leakage Prevention
+They do not necessarily represent ten seconds of data.
 
-The following fields are excluded from model inputs:
+## 5.3 Leakage Prevention
+
+The following fields are not included as classifier inputs:
 
 - Run identifiers.
-
 - Workload names.
-
-- Labels.
-
+- Classification labels.
 - Target variables.
-
 - Existing heuristic risk scores.
 
-Features are calculated within their individual runs.
+Feature calculations are isolated by monitoring execution.
 
-This reduces the risk of accidentally exposing labels or measurements from other executions to the classifier.
+This helps prevent unintended sharing of information between unrelated runs.
 
-## 6. Dataset Partitioning
+---
 
-The historical dataset uses grouped training, validation, and test partitions.
+# 6. Dataset Partitioning
 
-The split preserves complete monitoring executions.
+The historical evaluation uses grouped training, validation, and test partitions.
 
-### 6.1 Partition Results
+## 6.1 Recorded Partitions
 
-| Partition | Runs | Rows |
+| Partition | Runs | Observations |
 |---|---:|---:|
 | Training | 24 | 933 |
 | Validation | 4 | 154 |
-| Test | 4 | 156 |
+| Held-out test | 4 | 156 |
 | **Total** | **32** | **1,243** |
 
 Each workload contributes:
 
-- Six training runs.
-
-- One validation run.
-
-- One test run.
+- Six training executions.
+- One validation execution.
+- One held-out test execution.
 
 The recorded random seed is `42`.
 
-### 6.2 Partitioning Method
+## 6.2 Evaluation Procedure
 
-Run-level grouping prevents observations from the same monitoring execution from appearing in both training and testing.
+1. Validate the collected telemetry.
+2. Identify independent monitoring runs.
+3. Assign entire runs to dataset partitions.
+4. Train candidate models using the training partition.
+5. Evaluate candidates using the validation partition.
+6. Select the model using validation F1-score.
+7. Refit the selected configuration using training and validation data.
+8. Evaluate the selected classifier on the held-out test partition.
 
-The evaluation follows this procedure:
+## 6.3 Importance of Grouped Splitting
 
-1. Validate all eligible collected runs.
+Observations collected from the same execution are correlated.
 
-2. Assign complete runs to training, validation, and test partitions.
+A row-level random split could place highly related observations in both training and testing.
 
-3. Train candidate classifiers on the training partition.
+Run-level grouping reduces this source of evaluation leakage.
 
-4. Select the classifier using validation F1.
+The historical procedure is a grouped holdout evaluation, not grouped k-fold cross-validation.
 
-5. Refit the selected configuration on training and validation data.
+---
 
-6. Evaluate once on the held-out test partition.
+# 7. Machine-Learning Models
 
-**Important:** This procedure is grouped holdout evaluation. It is not k-fold cross-validation.
+Two supervised classifiers were compared.
 
-## 7. Machine-Learning Models
+## 7.1 Logistic Regression
 
-Two supervised classification models were evaluated.
+Logistic regression serves as the baseline model.
 
-### 7.1 Logistic Regression
+The implementation uses standardized numerical features and balanced class weights.
 
-Logistic regression serves as the baseline.
+It provides a simpler classification model for comparison.
 
-The implementation uses:
+## 7.2 Histogram-Based Gradient Boosting
 
-- Standardized numerical features.
+Histogram-based gradient boosting models nonlinear relationships among telemetry features.
 
-- Balanced class weights.
+Recorded model settings include:
 
-- A fixed random seed.
-
-- A maximum iteration limit.
-
-It provides a relatively interpretable baseline for comparing more complex classification models.
-
-### 7.2 Histogram-Based Gradient Boosting
-
-Histogram-based gradient boosting can model nonlinear relationships and interactions among telemetry features.
-
-The historical implementation uses fixed training settings, including:
-
-```text
-
+```python
 learning_rate = 0.06
-
 max_iter = 200
-
 max_leaf_nodes = 15
-
 l2_regularization = 1.0
-
 early_stopping = False
-
 random_state = 42
-
 ```
 
-### 7.3 Model Selection Results
+## 7.3 Model Comparison
 
 | Model | Validation F1 | False Positives | False Negatives |
 |---|---:|---:|---:|
 | Logistic Regression | 0.904762 | 7 | 1 |
 | Histogram-Based Gradient Boosting | **1.000000** | **0** | **0** |
 
-The histogram-based gradient boosting classifier achieved the higher validation F1 score.
+Histogram-based gradient boosting achieved the higher validation F1-score.
 
-It was selected for final fitting and evaluation.
+It was selected for final model fitting and held-out evaluation.
 
-**Selected model:** Histogram-Based Gradient Boosting Classifier.
+---
 
-## 8. Historical Model Evaluation
+# 8. Historical Model Evaluation
 
-The selected classifier was evaluated on 156 held-out telemetry observations from four independent executions.
+The selected classifier was evaluated on 156 observations from four held-out synthetic executions.
 
-The classification threshold was `0.50`.
+The recorded classification threshold was `0.50`.
 
-### 8.1 Evaluation Metrics
+## 8.1 Classification Metrics
 
 | Metric | Result |
 |---|---:|
-| Accuracy | **1.000** |
-| Precision | **1.000** |
-| Recall | **1.000** |
-| F1-score | **1.000** |
-| Average Precision | **1.000** |
-| ROC AUC | **1.000** |
-| False Positive Rate | **0.000** |
-| False Negative Rate | **0.000** |
+| Accuracy | 1.000 |
+| Precision | 1.000 |
+| Recall | 1.000 |
+| F1-score | 1.000 |
+| Average precision | 1.000 |
+| ROC AUC | 1.000 |
+| False-positive rate | 0.000 |
+| False-negative rate | 0.000 |
 
-These scores are taken from the recorded historical synthetic evaluation.
+These are the recorded historical synthetic benchmark results.
 
-### 8.2 Confusion Matrix
+## 8.2 Confusion Matrix
 
 | Actual / Predicted | Normal | Leak |
 |---|---:|---:|
 | Normal | 117 | 0 |
 | Leak | 0 | 39 |
 
-### Confusion Matrix Interpretation
+Equivalent classification counts:
 
-| Classification Outcome | Count |
+| Outcome | Count |
 |---|---:|
-| True Negatives | 117 |
-| True Positives | 39 |
-| False Positives | 0 |
-| False Negatives | 0 |
+| True negatives | 117 |
+| True positives | 39 |
+| False positives | 0 |
+| False negatives | 0 |
 
-All 156 held-out telemetry observations were classified correctly.
+## 8.3 Results by Workload
 
-The test partition contained 117 normal observations and 39 leak observations.
-
-### 8.3 Results by Workload
-
-| Workload | Actual Label | Correct Predictions |
+| Workload | Actual Class | Correct Predictions |
 |---|---|---:|
 | `normal_workload` | Normal | 39/39 |
 | `burst_workload` | Normal | 39/39 |
 | `cache_growth` | Normal | 39/39 |
 | `linear_leak` | Leak | 39/39 |
 
-Each workload's test subset contains observations from one execution.
+## 8.4 Interpretation
 
-The observations are correlated. They should not be treated as 156 independent experiments.
+The classifier correctly identified all observations in the recorded held-out synthetic test partition.
 
-### 8.4 Interpretation
+Nevertheless, only four independent executions were held out.
 
-The results demonstrate that the model classified all recorded observations in the held-out synthetic test partition correctly.
+The individual telemetry observations are correlated and must not be interpreted as 156 independent experiments.
 
-However:
+The workload implementations in the test partition were also represented by other executions during training.
 
-- Only four independent test executions were evaluated.
+Consequently, the reported performance does not establish equivalent accuracy on unfamiliar software.
 
-- The test programs were already represented by other executions during training.
+---
 
-- Only one leak-style implementation was included.
+# 9. Historical Functional Verification
 
-- The dataset does not establish performance on unrelated real applications.
+Additional software verification was recorded in October 2026.
 
-The historical result supports the feasibility of the implemented prototype, not a claim of universally perfect detection.
-
-## 9. Historical Functional Verification
-
-Additional verification was performed in October 2026.
-
-These checks exercised the original MemoryMedic monitoring and prediction pipeline.
-
-| Test | Recorded Result |
+| Verification | Recorded Result |
 |---|---|
 | Linux CMake build | Passed |
 | Registered C++ tests | Passed |
-| Normal workload CSV generation | Successful |
-| Burst workload CSV generation | Successful |
-| Cache-growth CSV generation | Successful |
-| Linear-leak CSV generation | Successful |
+| Normal-workload collection | Successful |
+| Burst-workload collection | Successful |
+| Cache-growth collection | Successful |
+| Linear-leak collection | Successful |
 | Normal-workload prediction smoke test | Expected normal classification |
 | Burst-workload prediction smoke test | Expected normal classification |
 | Cache-growth prediction smoke test | Expected normal classification |
 | Linear-leak prediction smoke test | Expected leak classification |
-| Python regression suite | 21 passed |
+| Original Python regression suite | 21 passed |
 
-The prediction smoke tests confirmed that a saved model could be loaded and used to classify newly generated demonstration telemetry.
+The prediction smoke tests demonstrate that the saved model could be loaded and applied to generated telemetry.
 
-These checks were not a separately designed independent benchmark.
+These checks are functional verification, not a new independent generalization benchmark.
 
-## 10. Original Python Regression Testing
+---
 
-The original regression suite includes 21 test methods.
+# 10. Original Python Regression Testing
 
-| Test Category | Tests | Result |
+The original Python regression suite contains 21 tests.
+
+| Category | Tests | Result |
 |---|---:|---|
 | Feature engineering | 11 | Passed |
-| Grouped dataset partitioning | 4 | Passed |
+| Dataset partitioning | 4 | Passed |
 | CSV and dataset validation | 3 | Passed |
 | Metrics and model persistence | 3 | Passed |
 | **Total** | **21** | **Passed** |
 
-The tests cover behavior including:
+The tests check functionality including:
 
-- Correct feature calculations.
+- Feature calculations.
+- Rolling-window behavior.
+- Isolation between runs.
+- Input validation.
+- Grouped dataset splitting.
+- Reproducibility of partitions.
+- Model saving and loading.
+- Isolation of held-out data.
 
-- Causal rolling features.
+These tests use controlled inputs and fixtures.
 
-- Run-boundary isolation.
+A numerical source-code coverage percentage has not been established.
 
-- Rejection of invalid measurements.
+---
 
-- Grouped data splitting.
+# 11. MemoryMedic AI 2.0 Backend Integration
 
-- Reproducibility of partition assignments.
+MemoryMedic AI 2.0 uses FastAPI to expose telemetry and saved-model prediction functionality.
 
-- Model persistence.
-
-- Test-data isolation.
-
-These tests verify implemented behaviors using synthetic fixtures.
-
-No numerical source-code coverage percentage has been established.
-
-## 11. MemoryMedic AI 2.0 Backend Integration
-
-MemoryMedic AI 2.0 introduces a FastAPI application that exposes the monitoring and machine-learning pipeline through HTTP endpoints.
-
-### 11.1 Backend Architecture
+## 11.1 Backend Structure
 
 ```text
-
 backend/
-
 ├── app/
-
 │   ├── __init__.py
-
 │   ├── main.py
-
 │   ├── metrics.py
-
 │   └── predictions.py
-
 ├── tests/
-
 │   ├── test_main.py
-
 │   ├── test_metrics.py
-
 │   └── test_predictions.py
-
 └── requirements.txt
-
 ```
 
-### 11.2 API Endpoints
+## 11.2 API Endpoints
 
 | Method | Endpoint | Purpose |
 |---|---|---|
-| GET | `/` | Retrieve API information |
-| GET | `/health` | Check API responsiveness |
-| GET | `/api/v1/metrics` | Retrieve historical telemetry |
-| POST | `/api/v1/predict` | Generate memory-leak predictions |
-| GET | `/docs` | Access Swagger API documentation |
+| GET | `/` | API information |
+| GET | `/health` | Health check |
+| GET | `/api/v1/metrics` | Historical telemetry |
+| POST | `/api/v1/predict` | Model predictions |
+| GET | `/docs` | Swagger documentation |
 
-### 11.3 API Verification
+## 11.3 Prediction Processing
 
-The following behaviors were observed during local testing.
+The prediction endpoint:
 
-| Verification | Result |
+1. Receives telemetry measurements.
+2. Validates request fields.
+3. Converts observations into a DataFrame.
+4. Applies feature engineering.
+5. Loads the trusted saved model.
+6. Verifies the expected feature schema.
+7. Generates model scores.
+8. Applies the classification threshold.
+9. Returns predictions as JSON.
+
+The response includes prediction results and model-related metadata.
+
+## 11.4 Observed API Behavior
+
+| Verification | Recorded Result |
 |---|---|
-| FastAPI documentation loads | Successful |
-| Health endpoint responds | Successful |
-| Historical metrics endpoint responds | Successful |
-| Prediction endpoint returns JSON | Successful |
-| Valid prediction request | HTTP 200 |
-| Missing required measurements | HTTP 422 |
+| API documentation | Successful |
+| Health endpoint | Successful |
+| Historical metrics endpoint | Successful |
+| Prediction response | Successful |
+| Valid inference request | HTTP 200 |
+| Invalid required measurements | HTTP 422 |
 | Duplicate timestamps | HTTP 422 |
 | Missing trained model | HTTP 503 |
 
-### 11.4 Prediction Processing
+The missing-model behavior is important because the API must not fabricate predictions when the required model artifact is unavailable.
 
-The prediction endpoint performs the following operations:
+---
 
-1. Receives telemetry measurements.
+# 12. MemoryMedic AI 2.0 Backend Testing
 
-2. Validates request fields.
+## 12.1 Automated Tests
 
-3. Converts observations into a pandas DataFrame.
+The backend uses `pytest`.
 
-4. Applies the original feature-engineering pipeline.
-
-5. Locates and loads a trusted local trained-model artifact.
-
-6. Verifies the expected feature schema.
-
-7. Generates probabilities using the trained classifier.
-
-8. Applies the saved classification threshold.
-
-9. Returns predictions as JSON.
-
-The returned response includes the model-run identifier, threshold, number of predictions, and individual prediction results.
-
-A missing model produces an error rather than fabricated classification data.
-
-## 12. MemoryMedic AI 2.0 Backend Testing
-
-The updated FastAPI backend was tested locally using `pytest`.
-
-### 12.1 Test Results
+Recorded local verification:
 
 ```text
-
-================ test session starts ================
-
 Collected 13 items
 
-backend/tests/test_main.py          PASSED
+backend/tests/test_main.py        PASSED
+backend/tests/test_metrics.py     PASSED
+backend/tests/test_predictions.py PASSED
 
-backend/tests/test_metrics.py       PASSED
-
-backend/tests/test_predictions.py   PASSED
-
-================ warnings summary ===================
-
-1 deprecation warning
-
-============== 13 passed, 1 warning ================
-
+13 passed, 1 warning
 ```
 
-The output above summarizes the observed test results rather than reproducing the full original terminal log.
+The output above is a summary of the recorded result, not a verbatim complete terminal transcript.
 
-### 12.2 Prediction API Tests
+## 12.2 Test Coverage
 
-The prediction suite checks:
+The backend test suite checks:
 
-| Test | Expected Result | Observed Result |
-|---|---|---|
-| Successful inference response | HTTP 200 | Passed |
-| Missing required feature | HTTP 422 | Passed |
-| Duplicate timestamp | HTTP 422 | Passed |
-| Missing saved model | HTTP 503 | Passed |
+- Root route behavior.
+- Health endpoint behavior.
+- Historical metrics retrieval.
+- Invalid workload rejection.
+- Missing and invalid numerical measurements.
+- Successful prediction responses.
+- Missing model handling.
+- Invalid prediction requests.
+- Duplicate timestamp rejection.
 
-Some automated tests use a predictable fake estimator to isolate API behavior.
+Some prediction tests use a deterministic fake estimator.
 
-Therefore, these tests establish that the API behaves as expected for those test conditions, not that the actual trained model achieves a new accuracy score.
+This allows API logic to be tested without depending on the actual trained classifier.
 
-### 12.3 Testing Conclusion
+Therefore, passing backend tests do not establish a new machine-learning accuracy result.
 
-The 13 passing tests provide evidence that the implemented backend routes, telemetry validation, and prediction-handling behavior work under the tested conditions.
+## 12.3 Recorded Warning
 
-The single deprecation warning does not represent a failed test.
+The recorded backend test run produced one non-failing deprecation warning involving FastAPI/Starlette test infrastructure.
 
-## 13. React Dashboard Implementation
+All 13 tests passed in that run.
 
-The MemoryMedic AI 2.0 frontend uses React and Vite.
+## 12.4 Verification Command
 
-The dashboard communicates with the backend through locally proxied API requests.
+```bash
+cd ~/Desktop/MemoryMedic
+PYTHONPATH=. backend/.venv/bin/python -m pytest backend/tests -v
+```
 
-### 13.1 Frontend Structure
+The command requires the corresponding local virtual environment and dependencies.
+
+---
+
+# 13. React Dashboard Implementation
+
+MemoryMedic AI 2.0 uses React and Vite for the frontend.
+
+## 13.1 Frontend Structure
 
 ```text
-
 frontend/
-
 ├── public/
-
 ├── src/
-
 │   ├── assets/
-
 │   ├── App.jsx
-
+│   ├── App.test.jsx
 │   ├── App.css
-
 │   ├── index.css
-
-│   └── main.jsx
-
+│   ├── main.jsx
+│   └── setupTests.js
 ├── index.html
-
 ├── package.json
-
 ├── package-lock.json
-
-└── vite.config.js
-
+├── vite.config.js
+└── vitest.config.js
 ```
 
-### 13.2 Dashboard Features
+## 13.2 Dashboard Capabilities
 
-The current dashboard provides:
+The implemented dashboard includes:
 
-- Backend connectivity status.
-
-- Selection of historical workload data.
-
-- Resident memory summaries.
-
-- Virtual memory summaries.
-
-- Peak resident memory summaries.
-
-- Number of telemetry observations.
-
-- Memory usage visualization.
-
+- API connectivity status.
+- Historical workload selection.
+- Resident-memory summary.
+- Virtual-memory summary.
+- Peak resident-memory summary.
+- Number of observations loaded.
+- Historical memory charts.
 - Recent telemetry table.
+- AI prediction button.
+- Latest classification.
+- Model-generated leak score.
+- Classification threshold.
+- Count of observations flagged as leaks.
 
-- AI memory-leak predictions.
+## 13.3 Supported Workloads
 
-- Model classification threshold.
+The dashboard provides historical telemetry demonstrations for:
 
-- Model-generated leak probabilities.
+- Normal workload.
+- Linear memory leak.
+- Memory burst.
+- Cache growth.
 
-### 13.3 Historical Telemetry Visualization
+## 13.4 Data Source Limitations
 
-The dashboard plots measurements from the selected workload.
+The dashboard reads previously collected CSV telemetry through the backend.
 
-The visualized series include:
+It is not a continuously streaming production-monitoring service.
 
-- Resident memory.
+The displayed measurements should not be described as live observations from arbitrary running processes.
 
-- Virtual memory.
+---
 
-These charts help users inspect trends in the collected process telemetry.
+# 14. Dashboard Functional Verification
 
-The data represents recorded observations, not an automatically updating live monitor.
+The dashboard was demonstrated locally using a FastAPI backend and React frontend.
 
-## 14. Dashboard Functional Verification
+The recorded local development addresses were:
 
-The React dashboard was opened locally at:
+```text
+Backend:  http://127.0.0.1:8001
+Frontend: http://127.0.0.1:5173
+```
 
-`http://127.0.0.1:5173`
+## 14.1 Normal-Workload Demonstration
 
-The FastAPI backend was available at:
-
-`http://127.0.0.1:8001`
-
-The browser screenshots demonstrate that the dashboard successfully displayed historical telemetry and a model prediction.
-
-### 14.1 Observed Normal-Workload Results
-
-| Measurement | Displayed Result |
+| Measurement | Recorded Value |
 |---|---:|
-| Selected workload | `normal_workload` |
 | Samples analyzed | 40 |
 | Latest RSS | Approximately 67.1 MiB |
 | Virtual memory | Approximately 70.9 MiB |
 | Peak RSS | Approximately 67.1 MiB |
 | Latest classification | Normal |
-| Latest leak probability | Approximately 0.02% |
-| Classification threshold | 50% |
-| Samples predicted as leaks | 0 |
+| Latest leak score | Approximately 0.02% |
+| Threshold | 50% |
+| Samples flagged | 0 |
 
-### 14.2 Interpretation
+The plotted resident-memory measurements remained approximately stable.
 
-The demonstrated normal workload produced stable RSS measurements.
+The dashboard displayed the normal classification and associated model output.
 
-The API classified the submitted observations as normal.
+## 14.2 Linear-Leak Demonstration
 
-The dashboard displayed:
+| Measurement | Recorded Value |
+|---|---:|
+| Samples analyzed | 39 |
+| Latest RSS | Approximately 43.3 MiB |
+| Virtual memory | Approximately 47.5 MiB |
+| Peak RSS | Approximately 43.5 MiB |
+| Latest classification | Potential leak detected |
+| Latest leak score | Approximately 99.95% |
+| Threshold | 50% |
+| Samples flagged | 39 |
 
-- The classification result.
+The historical memory chart showed increasing memory usage.
 
-- The latest leak probability.
+The dashboard displayed a potential-leak classification.
 
-- The model threshold.
+This demonstrates the integrated prediction path for the selected synthetic workload.
 
-- The number of observations classified.
+The displayed score has not been independently established as a calibrated real-world probability.
 
-This demonstrates functioning communication among the frontend, backend, and saved model under the tested local conditions.
+## 14.3 Other Workload Demonstrations
 
-It does not establish an independently measured false-positive rate, real-world accuracy, or probability calibration.
+The following additional workloads were displayed:
 
-### 14.3 Dashboard Verification Checklist
+- Memory burst.
+- Cache growth.
 
-- [x] React dashboard renders.
+Their recorded screenshots are included in the appendix.
 
-- [x] Backend health status appears.
+These demonstrations provide evidence of dashboard functionality with differing historical telemetry patterns.
 
+They are not a separate statistically independent model benchmark.
+
+## 14.4 Verification Checklist
+
+- [x] React dashboard loads.
+- [x] Backend connection status appears.
 - [x] Historical telemetry loads.
-
+- [x] Workload selector displays.
 - [x] Memory summary cards display.
-
 - [x] Memory chart displays.
-
 - [x] Recent telemetry table displays.
-
-- [x] Prediction request completes.
-
+- [x] AI prediction request completes in recorded demonstrations.
 - [x] Prediction results display.
+- [x] Four workload screenshots recorded.
+- [x] Automated frontend component tests implemented.
+- [ ] Real-browser end-to-end tests against a running backend.
+- [ ] Testing against additional unfamiliar applications.
+- [ ] Live process-monitoring integration.
 
-- [x] Frontend production build completes.
+## 14.5 Frontend Automated Tests
 
-- [x] Add automated React component and integration tests using Vitest and React Testing Library.
-- [ ] Add real-browser end-to-end tests (e.g., Playwright) against a running backend.
+The frontend uses Vitest and React Testing Library.
 
-- [ ] Evaluate dashboard behavior with additional independent workloads.
+Test files include:
 
-- [ ] Implement and evaluate live monitoring if required.
+```text
+frontend/src/App.test.jsx
+frontend/src/setupTests.js
+frontend/vitest.config.js
+```
 
-### 14.4 Frontend Automated Test Verification (November 16, 2026)
+Four tests passed in the recorded local run.
 
-The dashboard includes `frontend/src/App.test.jsx`, `frontend/src/setupTests.js`, and `frontend/vitest.config.js`. Its `package.json` defines `npm test` as `vitest run`.
-
-The four recorded local frontend tests passed. These tests cover:
-
-| Test | Verification target | Recorded result |
+| Test | Verification | Result |
 |---|---|---|
-| Dashboard and telemetry loading | Health status, mocked historical metrics, chart rendering, and summary display | Passed |
-| Switching to `linear_leak` | Workload selector triggers the corresponding metrics request | Passed |
-| AI prediction request | Prediction button sends a POST request and renders classification and score | Passed |
-| Backend error display | Mocked HTTP 503 response produces an accessible error message | Passed |
+| Dashboard loading | Mocked telemetry and UI rendering | Passed |
+| Workload selection | Switching to linear-leak telemetry | Passed |
+| AI prediction | Prediction request and result display | Passed |
+| Error handling | HTTP 503 response display | Passed |
 
-The tests stub `fetch` and mock Recharts components. Consequently, they are **frontend component/integration tests with simulated API data**, not proof that all four workflows operate correctly with a live backend. The separate dashboard workload screenshots provide local integrated demonstrations.
+The tests use mocked network responses and mocked chart components.
 
-**Run locally from the project root:**
+Consequently, they verify frontend component behavior, not complete live-browser operation or classifier accuracy.
+
+## 14.6 Frontend Test Commands
 
 ```bash
-cd frontend
+cd ~/Desktop/MemoryMedic/frontend
+
 npm ci
 npm test
 npm run lint
 npm run build
 ```
 
-**Recorded local verification:** four Vitest tests passed; Oxlint finished without warnings or errors; the Vite production build completed. This is the recorded result, not a claim that the commands were re-run for this document update.
+Recorded local results:
 
-## 15. Frontend Production Build
+- Four Vitest tests passed.
+- Oxlint completed without warnings or errors.
+- The Vite production build completed successfully.
 
-The frontend was verified using Vite's production build command.
+---
 
-### 15.1 Command
+# 15. Frontend Production Build
 
-From the `frontend` directory:
+## 15.1 Build Command
 
 ```bash
-
+cd ~/Desktop/MemoryMedic/frontend
 npm run build
-
 ```
 
-### 15.2 Recorded Outcome
+## 15.2 Recorded Results
 
-The terminal output demonstrated:
+The frontend build completed successfully and generated the `dist` directory.
 
-```text
+The build demonstrates that the application can be bundled for production distribution.
 
-vite building client environment for production...
+It does not independently demonstrate a production deployment.
 
-Modules transformed successfully.
+## 15.3 Build Warnings
 
-Build completed successfully.
+An earlier recorded build warned that some generated chunks exceeded Vite's recommended size threshold.
 
-```
+The warning did not prevent the build from completing.
 
-The build generated the frontend `dist` directory.
-
-The local build demonstrated that the React application could be bundled for production.
-
-This does not independently verify runtime connectivity or production deployment.
-
-### 15.3 Build Warning
-
-One observed build reported that some chunks exceeded Vite's size warning threshold.
-
-The warning did not prevent compilation.
-
-Possible future improvements include:
+Potential future improvements include:
 
 - Dynamic imports.
-
-- Route-level or component-level code splitting.
-
+- Application code splitting.
 - Reducing large dependencies.
+- Optimizing chart-related dependencies.
 
-- Separating infrequently used UI modules.
+These remain future enhancements unless independently implemented and verified.
 
-These optimizations remain future performance work unless a separate change verifies them.
+---
 
-## 16. Continuous Integration and GitHub Actions
+# 16. Continuous Integration and GitHub Actions
 
-MemoryMedic uses GitHub Actions to execute automated checks.
+MemoryMedic uses GitHub Actions for automated software verification.
 
-The project has separate workflows for the original system, backend, and dashboard.
+## 16.1 Workflows
 
-### 16.1 CI Workflows
-
-| Workflow | Primary Responsibility |
+| Workflow | Purpose |
 |---|---|
-| `ci.yml` | C++ builds, Python validation, and shell-script checks |
-| `backend-ci.yml` | FastAPI backend syntax and automated tests |
-| `frontend-ci.yml` | React dashboard dependency installation and production build |
+| `ci.yml` | Original C++, Python, and shell checks |
+| `backend-ci.yml` | FastAPI backend verification |
+| `frontend-ci.yml` | React frontend verification |
 
-### 16.2 Backend CI
+## 16.2 Original Project CI
 
-The backend workflow:
+The original workflow includes checks for:
 
-1. Checks out the repository.
+- C++ compilation and tests.
+- Python validation.
+- Shell-script syntax.
+- Other configured project verification tasks.
 
-2. Sets up Python.
+## 16.3 Backend CI
 
-3. Installs the project dependencies.
+The backend workflow checks the FastAPI implementation and runs its automated tests.
 
-4. Checks Python syntax.
-
-5. Executes the backend test suite.
-
-The configured test command is:
+Relevant test command:
 
 ```bash
-
 python -m pytest backend/tests -v
-
 ```
 
-### 16.3 Frontend CI
+## 16.4 Dashboard CI
 
-The dashboard workflow:
+The updated frontend workflow performs:
 
-1. Checks out the repository.
+1. Repository checkout.
+2. Node.js environment setup.
+3. Dependency installation.
+4. Frontend linting.
+5. Vitest execution.
+6. Production build.
+7. Build-output verification.
 
-2. Sets up Node.js.
-
-3. Installs frontend dependencies.
-
-4. Builds the React application.
-
-5. Verifies the build output.
-
-The frontend workflow includes:
+Relevant commands include:
 
 ```bash
-
 npm ci
-
+npm run lint
+npm test
 npm run build
-
 test -f dist/index.html
-
 ```
 
-### 16.4 Observed CI Results
+## 16.5 Recorded GitHub Actions Results
 
-GitHub Actions screenshots demonstrated successful workflow runs for the MemoryMedic core project, FastAPI integration, and dashboard build.
+Successful workflow runs were observed for the core MemoryMedic project, FastAPI backend, and React dashboard.
 
-The backend feature branch was also successfully merged into `main` after its checks passed.
+The updated dashboard workflow passed following the frontend Vitest configuration and cleanup changes.
 
-Successful CI execution verifies the checks configured in each workflow.
+A successful workflow confirms that its configured checks passed for the tested commit.
 
-It does not substitute for independent model benchmarking.
+It does not establish production readiness or independent model generalization.
 
-**GitHub Actions:**
+## 16.6 Dashboard CI Screenshot
 
-https://github.com/leslieraya555/MemoryMedic/actions
+![Successful MemoryMedic Dashboard CI](images/memorymedic-frontend-ci-passed.png)
 
-### 16.5 Updated Dashboard CI Evidence (November 16, 2026)
+**Evidence file:** `docs/images/memorymedic-frontend-ci-passed.png`
 
-The current `frontend-ci.yml` workflow runs static checks (`npm run lint`), automated frontend tests (`npm test`), a production build (`npm run build`), and output verification. A successful dashboard workflow run was captured and committed as `docs/images/memorymedic-frontend-ci-passed.png`.
+**Workflow:** [MemoryMedic Dashboard CI](https://github.com/leslieraya555/MemoryMedic/actions/workflows/frontend-ci.yml)
 
-![Successful MemoryMedic Dashboard CI run](images/memorymedic-frontend-ci-passed.png)
+**All workflows:** [GitHub Actions](https://github.com/leslieraya555/MemoryMedic/actions)
 
-- [Dashboard CI workflow](https://github.com/leslieraya555/MemoryMedic/actions/workflows/frontend-ci.yml)
-- [All GitHub Actions runs](https://github.com/leslieraya555/MemoryMedic/actions)
-- [Source test file](../frontend/src/App.test.jsx)
+---
 
-**Evidence scope:** A green CI run supports that the configured tests and build succeeded for the checked commit. It is not a production-deployment certificate or an independent model generalization benchmark. The runner may also report non-failing toolchain/deprecation notices.
-
-## 17. Reproducibility
+# 17. Reproducibility
 
 Reproducibility is an important objective of the MemoryMedic project.
 
-The historical training procedure records dataset identities, partition assignments, model settings, dependencies, and evaluation results.
+The historical benchmark records dataset partitions, model settings, dependencies, and evaluation results.
 
-### 17.1 Historical Training Artifacts
+## 17.1 Historical Artifacts
 
 | Artifact | Purpose |
 |---|---|
-| `evaluation.json` | Stores model evaluation results |
-| `splits.csv` | Records training, validation, and test assignments |
-| `memorymedic_model.joblib` | Stores the fitted model and metadata |
+| `evaluation.json` | Stores evaluation results |
+| `splits.csv` | Stores dataset partition assignments |
+| `memorymedic_model.joblib` | Stores the trained model |
 | `requirements-used.txt` | Records dependency versions |
-| `COMPLETE.txt` | Marks completed training output |
+| `COMPLETE.txt` | Identifies completed training output |
 
-Historical training artifacts were recorded locally under:
+Generated training artifacts are stored locally in timestamped directories under `artifacts/ml/`.
 
-```text
+They are not guaranteed to be present in a fresh GitHub clone.
 
-artifacts/ml/training_<timestamp>_<identifier>/
+## 17.2 Historical Software Environment
 
-```
+The historical training records include:
 
-Full generated artifacts are not guaranteed to exist in a fresh GitHub clone.
-
-### 17.2 Historical Environment
-
-The saved historical training reports record:
-
-| Component | Version |
+| Dependency | Version |
 |---|---|
 | Python | 3.14.4 |
 | NumPy | 2.5.2 |
@@ -1152,367 +1003,376 @@ The saved historical training reports record:
 | SciPy | 1.18.1 |
 | threadpoolctl | 3.6.0 |
 
-The GitHub CI environment may use different compatible dependency versions.
+These versions describe the recorded historical environment.
 
-Reproducing historical model results exactly requires compatible code, original data, partition assignments, model settings, and dependencies.
+GitHub Actions may use different compatible versions.
 
-### 17.3 Verify Backend Tests
+## 17.3 Backend Reproduction
 
 From the project root:
 
 ```bash
-
-cd \~/Desktop/MemoryMedic
-
+cd ~/Desktop/MemoryMedic
 PYTHONPATH=. backend/.venv/bin/python -m pytest backend/tests -v
-
 ```
 
-### 17.4 Verify Frontend Build
-
-```bash
-
-cd \~/Desktop/MemoryMedic/frontend
-
-npm ci
-
-npm run build
-
-```
-
-### 17.4a Verify Frontend Tests and Lint
+## 17.4 Frontend Reproduction
 
 ```bash
 cd ~/Desktop/MemoryMedic/frontend
+
 npm ci
 npm test
 npm run lint
+npm run build
 ```
 
-The four automated frontend tests are not browser-based end-to-end tests. CI runs them before building the production bundle.
+## 17.5 Start the API
 
-### 17.5 Start the API
-
-Only start a new server if port 8001 is available.
+From the project root:
 
 ```bash
+cd ~/Desktop/MemoryMedic
 
-cd \~/Desktop/MemoryMedic
-
-backend/.venv/bin/python -m uvicorn backend.app.main:app \\
-
-  --reload \\
-
-  --host 127.0.0.1 \\
-
+backend/.venv/bin/python -m uvicorn backend.app.main:app \
+  --reload \
+  --host 127.0.0.1 \
   --port 8001
-
 ```
 
-The API documentation is available at:
+API documentation:
 
 http://127.0.0.1:8001/docs
 
-The health endpoint is available at:
+Health endpoint:
 
 http://127.0.0.1:8001/health
 
-### 17.6 Start the Frontend
+## 17.6 Start the Dashboard
 
 In a separate terminal:
 
 ```bash
-
-cd \~/Desktop/MemoryMedic/frontend
+cd ~/Desktop/MemoryMedic/frontend
 
 npm run dev -- --host 127.0.0.1 --port 5173
-
 ```
 
-The dashboard is available at:
+Dashboard:
 
 http://127.0.0.1:5173
 
-If a port is already occupied by the intended running service, use the existing service rather than starting a duplicate.
+If either port is already occupied by the intended service, use the existing server rather than starting a duplicate.
 
-## 18. Evidence and Verification Records
+## 17.7 Reproducibility Limitations
 
-The checked-in [backend pytest terminal log](memorymedic-terminal-output.txt) records 13 passing tests and one non-failing warning.
+Exact historical benchmark reproduction requires the original dataset, partition assignments, model configuration, and compatible dependency environment.
 
-The following evidence supports the documented project evaluation.
+A fresh clone does not automatically reproduce historical results if the required generated datasets and trained artifacts are unavailable.
 
-| Evidence | Location |
-|---|---|
-| Original evaluation | `docs/evaluation_report.md` |
-| Original architecture | `docs/architecture.md` |
-| Machine-learning training | `ml/train_model.py` |
-| Feature engineering | `ml/feature_engineering.py` |
-| Offline predictions | `ml/predict_csv.py` |
-| API application | `backend/app/main.py` |
-| Historical metrics API | `backend/app/metrics.py` |
-| Prediction API | `backend/app/predictions.py` |
-| Backend tests | `backend/tests/` |
-| Dashboard application | `frontend/src/App.jsx` |
-| Frontend automated tests | `frontend/src/App.test.jsx` and `frontend/src/setupTests.js` |
-| Frontend test configuration | `frontend/vitest.config.js` |
-| Frontend build configuration | `frontend/vite.config.js` |
-| CI workflows | `.github/workflows/` |
-| Frontend CI pass screenshot | `docs/images/memorymedic-frontend-ci-passed.png` |
-| Four workload screenshots | `docs/images/memorymedic-*-prediction.png` (see appendix) |
-| Original build screenshot | `docs/images/memorymedic-build-test-training-results.png` |
-| Historical model evaluations | `artifacts/ml/training_*/evaluation.json` |
-
-### 18.1 Historical Verification Screenshot
-
-![MemoryMedic historical build, testing, and model-training verification](images/memorymedic-build-test-training-results.png)
-
-The image documents historical project build and training verification.
-
-### 18.2 Verified Screenshot Inventory
-
-The following screenshot filenames have been verified in the repository's `docs/images/` directory:
-
-| Screenshot | What it documents |
-|---|---|
-| [`memorymedic-build-test-training-results.png`](images/memorymedic-build-test-training-results.png) | Earlier local build, testing, and training demonstration |
-| [`memorymedic-normal-workload-prediction.png`](images/memorymedic-normal-workload-prediction.png) | Normal-workload dashboard and prediction |
-| [`memorymedic-linear-leak-prediction.png`](images/memorymedic-linear-leak-prediction.png) | Linear-leak dashboard and prediction |
-| [`memorymedic-memory-burst-prediction.png`](images/memorymedic-memory-burst-prediction.png) | Memory-burst dashboard and prediction |
-| [`memorymedic-cache-growth-prediction.png`](images/memorymedic-cache-growth-prediction.png) | Cache-growth dashboard and prediction |
-| [`memorymedic-frontend-ci-passed.png`](images/memorymedic-frontend-ci-passed.png) | Successful frontend GitHub Actions verification |
-
-Additional backend and performance screenshots should be added only after capturing the corresponding evidence. Do not relabel illustrative images as independent benchmark results.
-
-## 19. Limitations and Threats to Validity
-
-MemoryMedic currently has several important limitations.
-
-### 19.1 Limited Synthetic Workloads
-
-The original benchmark uses four controlled applications.
-
-These workloads do not represent the full range of memory behavior found in real-world applications.
-
-### 19.2 Limited Leak Diversity
-
-Only one synthetic leak-style implementation is included in the historical benchmark.
-
-Different leak rates, allocation patterns, and application architectures may require additional training examples.
-
-### 19.3 Small Independent Test Set
-
-Although the test dataset contains 156 observations, only four independent monitoring runs were held out.
-
-Adjacent observations are correlated.
-
-Therefore, the number of independent experimental units is much smaller than the number of rows.
-
-### 19.4 Unknown Real-World Generalization
-
-The historical model has not been independently evaluated on a broad collection of unrelated production applications.
-
-Its real-world precision, recall, and false-alarm rates remain unknown.
-
-### 19.5 Historical Dashboard Data
-
-The current dashboard displays historical CSV observations.
-
-It is not yet a general-purpose live process-monitoring platform.
-
-### 19.6 No Measured Operational Overhead
-
-The available report does not establish:
-
-- CPU overhead from monitoring.
-
-- Memory overhead from monitoring.
-
-- End-to-end detection latency.
-
-- False alerts per monitoring hour.
-
-- Production service reliability.
-
-### 19.7 Limited Cross-Validation
-
-The documented historical model evaluation uses grouped training, validation, and holdout partitions.
-
-Grouped k-fold cross-validation has not been reported.
-
-### 19.8 Probability Calibration
-
-The displayed probability is a model output.
-
-A 0.02% reported leak probability does not establish that the real-world probability of a memory leak is exactly 0.02%.
-
-Probability calibration has not been independently demonstrated.
-
-### 19.9 Deployment Limitations
-
-The project has been demonstrated in a local development environment.
-
-A production deployment would require additional security, monitoring, operational testing, and reliability engineering.
-
-## 20. Recommended Future Evaluations
-
-The next stage should focus on testing MemoryMedic beyond its original controlled benchmark.
-
-### 20.1 Expand Workload Diversity
-
-Add independent workloads representing:
-
-- Slow memory leaks.
-
-- Rapid memory leaks.
-
-- Temporary high-memory usage.
-
-- Long-running bounded caches.
-
-- Periodic allocation and release.
-
-- Multithreaded memory activity.
-
-- Unfamiliar applications with different allocation patterns.
-
-### 20.2 Evaluate Unseen Applications
-
-Introduce applications not represented during training.
-
-Preserve a final independent test set while selecting models and thresholds.
-
-### 20.3 Evaluate False Positives
-
-Measure how often normal applications are incorrectly classified as leaks.
-
-Recommended metrics include:
-
-- False positives per independent run.
-
-- False alerts per monitoring hour.
-
-- Specificity.
-
-- Precision.
-
-### 20.4 Measure Detection Latency
-
-Record the time between the beginning of a controlled leak and its detection.
-
-Compare detection performance across multiple leak rates.
-
-### 20.5 Measure Monitoring Overhead
-
-Compare monitored and unmonitored runs under similar conditions.
-
-Record:
-
-- CPU utilization.
-
-- Memory utilization.
-
-- Execution time.
-
-- Monitoring resource consumption.
-
-### 20.6 Evaluate Model Robustness
-
-Test variations in:
-
-- Sample intervals.
-
-- Run durations.
-
-- Memory-allocation rates.
-
-- Application workloads.
-
-- Operating conditions.
-
-### 20.7 Expand Frontend and Browser Testing
-
-The four existing Vitest/React Testing Library tests already cover selected dashboard loading, workload selection, prediction, and error behavior with mocked network responses. Future work should extend them with real-browser end-to-end tests against a running API, including:
-
-- Dashboard loading.
-
-- API connectivity.
-
-- Workload selection.
-
-- Memory visualization.
-
-- Prediction requests.
-
-- Error and loading states.
-
-### 20.8 Add Grouped Cross-Validation if Required
-
-If additional model evaluation is required, use grouping that prevents the same run from appearing in multiple folds.
-
-Report fold membership and performance variation while preserving a separate final test partition.
-
-## 21. Future Development Roadmap
-
-| Priority | Development Task | Status |
-|---|---|---|
-| High | Verify predictions across additional workload types | Further testing needed |
-| High | Expand independent benchmark workloads | Planned |
-| High | Measure false alarms and detection latency | Planned |
-| High | Measure monitoring overhead | Planned |
-| Medium | Add real-browser end-to-end integration tests | Planned; four mocked frontend tests already implemented |
-| Medium | Evaluate probability calibration | Planned |
-| Medium | Add live process-monitoring integration | Future development |
-| Medium | Implement configurable alerting | Future development |
-| Low | Optimize frontend bundle size | Future enhancement |
-| Low | Prepare a deployment architecture | Future enhancement |
-
-These are development goals, not claims of completed functionality.
-
-## 22. Final Assessment
-
-MemoryMedic successfully demonstrates an integrated software pipeline combining operating-system process monitoring, machine-learning classification, backend services, automated testing, and interactive data visualization.
-
-The historical benchmark achieved the following results:
-
-- 1,243 telemetry observations.
-
-- 32 independent monitoring runs.
-
-- Four synthetic workload implementations.
-
-- A grouped train/validation/test split.
-
-- Histogram-based gradient boosting selected by validation F1.
-
-- Perfect classification of the 156 held-out synthetic test observations.
-
-Subsequent software verification demonstrated:
-
-- Successful C++ and Python component testing.
-
-- Functional saved-model inference.
-
-- Successful FastAPI integration.
-
-- 13 passing backend tests.
-
-- Successful React dashboard rendering.
-
-- Successful frontend production builds.
-
-- Successful configured GitHub Actions checks.
-
-The MemoryMedic AI 2.0 dashboard also displayed telemetry and predictions for the normal, linear-leak, memory-burst, and cache-growth synthetic workloads in the recorded local screenshots.
-
-**Conclusion:** MemoryMedic AI 2.0 is a functioning, modular, and tested research/portfolio prototype under the documented conditions.
-
-Its current evaluation provides evidence that the implemented system works on controlled synthetic workloads and selected local demonstrations.
-
-Additional independent benchmarking is required before making strong claims about general-purpose memory-leak detection, real-world reliability, calibrated risk probabilities, or production readiness.
+The existing documentation and CI checks provide partial reproducibility evidence.
 
 ---
 
-## References and Project Documentation
+# 18. Evidence and Verification Records
+
+The project includes source files, test results, screenshots, and workflow records supporting the evaluation.
+
+## 18.1 Evidence Inventory
+
+| Evidence | Location |
+|---|---|
+| Evaluation report | `docs/evaluation_report.md` |
+| Architecture documentation | `docs/architecture.md` |
+| Model documentation | `docs/model_card.md` |
+| Backend test log | `docs/memorymedic-terminal-output.txt` |
+| Training pipeline | `ml/train_model.py` |
+| Feature engineering | `ml/feature_engineering.py` |
+| Prediction CLI | `ml/predict_csv.py` |
+| FastAPI application | `backend/app/main.py` |
+| Backend tests | `backend/tests/` |
+| React dashboard | `frontend/src/App.jsx` |
+| Frontend tests | `frontend/src/App.test.jsx` |
+| Vitest configuration | `frontend/vitest.config.js` |
+| CI workflow definitions | `.github/workflows/` |
+| Workload screenshots | `docs/images/` |
+
+## 18.2 Historical Build Evidence
+
+![Historical build and training results](images/memorymedic-build-test-training-results.png)
+
+The screenshot documents an earlier build, test, and training demonstration.
+
+## 18.3 Backend Test Log
+
+The checked-in backend test log records:
+
+```text
+13 passed, 1 warning
+```
+
+[View Backend Test Log](memorymedic-terminal-output.txt)
+
+This result documents the recorded local backend test execution.
+
+## 18.4 Screenshot Inventory
+
+| Screenshot | Verification |
+|---|---|
+| `memorymedic-build-test-training-results.png` | Historical build and training |
+| `memorymedic-normal-workload-prediction.png` | Normal workload |
+| `memorymedic-linear-leak-prediction.png` | Linear memory leak |
+| `memorymedic-memory-burst-prediction.png` | Memory burst |
+| `memorymedic-cache-growth-prediction.png` | Cache growth |
+| `memorymedic-frontend-ci-passed.png` | Successful frontend CI |
+
+These screenshots provide visual evidence of the implemented system.
+
+Screenshots of additional benchmarks should be added only after completing those evaluations.
+
+---
+
+# 19. Limitations and Threats to Validity
+
+## 19.1 Limited Synthetic Dataset
+
+The original benchmark evaluates four synthetic workload implementations.
+
+These programs do not represent the complete range of real-world memory behavior.
+
+## 19.2 Limited Leak Diversity
+
+Only one leak-style implementation is represented.
+
+Different leak rates and allocation patterns may produce different model behavior.
+
+## 19.3 Small Independent Test Set
+
+The held-out dataset contains 156 observations but only four independent executions.
+
+Adjacent observations are correlated.
+
+Therefore, the effective number of independent experiments is substantially smaller than 156.
+
+## 19.4 Unknown Generalization
+
+The historical model was not independently benchmarked on a broad collection of unfamiliar production applications.
+
+Real-world precision, recall, and false-alarm rates remain unknown.
+
+## 19.5 Historical Dashboard Data
+
+The current dashboard visualizes recorded telemetry rather than automatically streaming live process measurements.
+
+## 19.6 Unknown Operational Overhead
+
+The report does not establish comprehensive measurements of:
+
+- CPU monitoring overhead.
+- Memory monitoring overhead.
+- End-to-end detection latency.
+- False alerts per monitoring hour.
+- Production service reliability.
+
+## 19.7 Limited Cross-Validation
+
+The recorded evaluation uses grouped training, validation, and held-out testing.
+
+Grouped k-fold cross-validation has not been reported.
+
+## 19.8 Probability Calibration
+
+A model-generated leak score is not necessarily a calibrated probability.
+
+The displayed scores have not been independently calibrated against real-world event frequencies.
+
+## 19.9 Production Deployment
+
+The project was demonstrated in a local development environment.
+
+A production implementation would require additional security, operational monitoring, reliability testing, and deployment engineering.
+
+---
+
+# 20. Recommended Future Evaluations
+
+## 20.1 Expand Workload Diversity
+
+Introduce additional independent workloads involving:
+
+- Slow leaks.
+- Rapid leaks.
+- Short-lived memory bursts.
+- Bounded caches.
+- Periodic allocation and release.
+- Multithreaded allocation.
+- Different application architectures.
+- Unfamiliar real-world applications.
+
+## 20.2 Evaluate Unseen Applications
+
+Use application implementations that were not represented during training.
+
+Maintain a separate final test partition that is not used for model selection.
+
+## 20.3 Measure False-Positive Behavior
+
+Record:
+
+- False positives per independent run.
+- False alerts per monitoring hour.
+- Specificity.
+- Precision on new workloads.
+
+## 20.4 Measure Detection Latency
+
+Measure the time between the beginning of a controlled memory leak and the first positive detection.
+
+Compare different allocation rates and sampling intervals.
+
+## 20.5 Measure Monitoring Overhead
+
+Compare monitored and unmonitored executions.
+
+Record:
+
+- CPU usage.
+- Memory usage.
+- Execution time.
+- Collector resource consumption.
+
+## 20.6 Evaluate Robustness
+
+Test different:
+
+- Collection intervals.
+- Execution durations.
+- Leak rates.
+- Workload sizes.
+- Application environments.
+
+## 20.7 Add Real-Browser End-to-End Tests
+
+The current frontend includes four Vitest tests using mocked network responses.
+
+Future browser-based tests should verify:
+
+- Dashboard startup.
+- Real backend connectivity.
+- Historical workload selection.
+- Chart rendering.
+- Prediction requests.
+- Loading indicators.
+- Error handling.
+- Recovery after backend failures.
+
+A tool such as Playwright could be used for these tests.
+
+## 20.8 Evaluate Probability Calibration
+
+Investigate how well the classifier's reported scores correspond to observed event frequencies.
+
+Potential evaluation methods include calibration curves and Brier scores.
+
+## 20.9 Grouped Cross-Validation
+
+Consider grouped cross-validation for additional model-development experiments.
+
+Keep all observations from one run within the same fold.
+
+Preserve a separate final holdout set.
+
+---
+
+# 21. Future Development Roadmap
+
+| Priority | Task | Status |
+|---|---|---|
+| High | Test unfamiliar applications | Planned |
+| High | Expand independent benchmark workloads | Planned |
+| High | Measure false positives | Planned |
+| High | Measure detection latency | Planned |
+| High | Measure monitoring overhead | Planned |
+| Medium | Real-browser end-to-end tests | Planned |
+| Medium | Probability calibration | Planned |
+| Medium | Live process monitoring in dashboard | Future development |
+| Medium | Automatic configurable alerts | Future development |
+| Medium | Broader grouped cross-validation | Planned |
+| Low | Reduce frontend bundle size | Future enhancement |
+| Low | Production deployment architecture | Future enhancement |
+
+The items in this table describe proposed development work.
+
+They should not be interpreted as completed functionality.
+
+---
+
+# 22. Final Assessment
+
+MemoryMedic AI 2.0 demonstrates an integrated software system combining:
+
+- Linux systems programming.
+- C++ process-memory monitoring.
+- Telemetry collection and validation.
+- Python feature engineering.
+- Supervised machine learning.
+- Saved-model inference.
+- FastAPI backend services.
+- React frontend visualization.
+- Automated software testing.
+- GitHub Actions continuous integration.
+
+## 22.1 Historical Benchmark
+
+The historical benchmark recorded:
+
+- 1,243 telemetry observations.
+- 32 independent monitoring runs.
+- Four synthetic workload implementations.
+- Grouped training, validation, and test partitions.
+- Histogram-based gradient boosting selected by validation F1-score.
+- Perfect classification of the 156 held-out synthetic observations.
+
+## 22.2 Software Verification
+
+Subsequent verification demonstrated:
+
+- Successful original C++ component tests.
+- 21 passing original Python regression tests.
+- Successful saved-model inference.
+- Successful FastAPI integration.
+- 13 passing backend tests.
+- Four passing React/Vitest tests.
+- Successful frontend linting.
+- Successful frontend production builds.
+- Successful configured GitHub Actions workflows.
+
+## 22.3 Dashboard Integration
+
+The dashboard demonstrated historical telemetry visualization and model predictions using:
+
+1. Normal workload.
+2. Linear memory leak.
+3. Memory burst.
+4. Cache growth.
+
+The corresponding screenshots are preserved in the project documentation.
+
+## 22.4 Conclusion
+
+MemoryMedic AI 2.0 is a functioning, modular, and tested research and portfolio prototype under the documented experimental conditions.
+
+The project demonstrates the integration of operating-system monitoring, data engineering, machine learning, API development, frontend visualization, and automated verification.
+
+The recorded results support the feasibility of the implemented system.
+
+They do not establish production readiness or reliable general-purpose detection of memory leaks in unfamiliar applications.
+
+Additional independent benchmarking, robustness testing, false-alarm measurement, and operational evaluation are required before making stronger claims.
+
+---
+
+# References and Project Documentation
 
 ## Project Repository
 
@@ -1521,74 +1381,91 @@ Additional independent benchmarking is required before making strong claims abou
 ## Source Code
 
 - [Model Training](../ml/train_model.py)
-
 - [Feature Engineering](../ml/feature_engineering.py)
-
 - [Offline Predictions](../ml/predict_csv.py)
-
 - [FastAPI Application](../backend/app/main.py)
-
+- [Historical Metrics API](../backend/app/metrics.py)
 - [Prediction API](../backend/app/predictions.py)
-
 - [React Dashboard](../frontend/src/App.jsx)
-- [Dashboard Automated Tests](../frontend/src/App.test.jsx)
-- [Frontend CI Workflow](../.github/workflows/frontend-ci.yml)
-
+- [Dashboard Tests](../frontend/src/App.test.jsx)
+- [Vitest Configuration](../frontend/vitest.config.js)
 - [Vite Configuration](../frontend/vite.config.js)
+- [Frontend CI](../.github/workflows/frontend-ci.yml)
 
 ## Related Documentation
 
 - [System Architecture](architecture.md)
-
 - [Model Card](model_card.md)
-
 - [Interview Guide](interview_guide.md)
+- [Backend Test Evidence](memorymedic-terminal-output.txt)
+- [Getting Started](START_HERE.md)
 
 ## Continuous Integration
 
 [MemoryMedic GitHub Actions](https://github.com/leslieraya555/MemoryMedic/actions)
 
-[Historical CI Verification — October 23, 2026](https://github.com/leslieraya555/MemoryMedic/actions/runs/40029177958)
+---
 
-## Appendix: Dashboard Workload Verification Screenshots
+# Appendix A. Dashboard Workload Verification
 
-The following screenshots document the MemoryMedic AI 2.0
+The following screenshots document the behavior of the MemoryMedic AI 2.0 dashboard with four controlled synthetic workload types.
 
-dashboard using four controlled synthetic workloads.
-
-They provide visual evidence of the historical telemetry
-
-display and locally demonstrated prediction behavior.
-
-### A. Normal Workload
+## A.1 Normal Workload
 
 ![Normal workload dashboard and prediction](images/memorymedic-normal-workload-prediction.png)
 
-### B. Linear Memory-Leak Workload
+The normal workload demonstration displays stable historical memory measurements and a normal model classification.
+
+## A.2 Linear Memory Leak
 
 ![Linear memory-leak dashboard and prediction](images/memorymedic-linear-leak-prediction.png)
 
-### C. Memory-Burst Workload
+The linear-leak demonstration displays increasing historical memory usage and a potential-leak classification.
+
+## A.3 Memory Burst
 
 ![Memory-burst dashboard and prediction](images/memorymedic-memory-burst-prediction.png)
 
-### D. Cache-Growth Workload
+The burst demonstration displays temporary allocation behavior.
+
+## A.4 Cache Growth
 
 ![Cache-growth dashboard and prediction](images/memorymedic-cache-growth-prediction.png)
 
-### Evidence Interpretation
+The cache-growth demonstration displays increasing memory usage associated with a bounded synthetic cache.
 
-These images demonstrate dashboard functionality on
+## A.5 Evidence Interpretation
 
-selected synthetic workloads. They do not establish
+These screenshots demonstrate the operation of the dashboard on selected historical telemetry.
 
-real-world detection accuracy, probability calibration,
+They do not establish real-world detection accuracy, model calibration, or production readiness.
 
-or production readiness.
+---
+
+# Appendix B. GitHub Actions Verification
+
+## B.1 Frontend Workflow
+
+![Successful frontend CI](images/memorymedic-frontend-ci-passed.png)
+
+The screenshot records a successful configured frontend CI workflow.
+
+## B.2 Verification Links
+
+- [Dashboard CI](https://github.com/leslieraya555/MemoryMedic/actions/workflows/frontend-ci.yml)
+- [Backend CI](https://github.com/leslieraya555/MemoryMedic/actions/workflows/backend-ci.yml)
+- [Core MemoryMedic CI](https://github.com/leslieraya555/MemoryMedic/actions/workflows/ci.yml)
+
+## B.3 Verification Scope
+
+Successful CI checks support the correctness of the tested software components under their configured test conditions.
+
+They are not a substitute for independent model benchmarking or production validation.
 
 ---
 
 **Report prepared by:** Leslie Raya  
 **Last updated:** November 16, 2026  
 **Document:** `docs/evaluation_report.md`  
-**Status:** Research and portfolio prototype; additional benchmarking required for production claims.
+**Project:** MemoryMedic AI 2.0  
+**Status:** Functioning research and portfolio prototype; further independent evaluation required.
