@@ -4,12 +4,12 @@
 
 **Project:** MemoryMedic / MemoryMedic AI 2.0
 
-**Report Updated:** November 16, 2026  
+**Report Updated:** November 17, 2026  
 **Report edition:** Consolidated evaluation, software verification, and screenshot evidence
 
 **Historical Model Benchmark:** September 2026
 
-**Software Verification:** October–November 16, 2026
+**Software Verification:** October–November 17, 2026
 
 **Repository:** [MemoryMedic on GitHub](https://github.com/leslieraya555/MemoryMedic)  
 **Evidence note:** Historical model evaluation and subsequent software verification are reported separately; screenshots supplement, rather than substitute for, reproducible results.
@@ -1263,6 +1263,7 @@ The following evidence supports the documented project evaluation.
 | Historical metrics API | `backend/app/metrics.py` |
 | Prediction API | `backend/app/predictions.py` |
 | Backend tests | `backend/tests/` |
+| Backend pytest verification screenshot | `docs/images/memorymedic-backend-13-tests-passed.png` |
 | Dashboard application | `frontend/src/App.jsx` |
 | Frontend automated tests | `frontend/src/App.test.jsx` and `frontend/src/setupTests.js` |
 | Frontend test configuration | `frontend/vitest.config.js` |
@@ -1293,6 +1294,7 @@ The following screenshot filenames have been verified in the repository's `docs/
 | [`memorymedic-cache-growth-prediction.png`](images/memorymedic-cache-growth-prediction.png) | Cache-growth dashboard and prediction |
 | [`memorymedic-frontend-ci-passed.png`](images/memorymedic-frontend-ci-passed.png) | Successful frontend GitHub Actions verification |
 | [`memorymedic-full-test-verification.png`](images/memorymedic-full-test-verification.png) | November 16 local terminal capture of backend tests, Vitest, lint, and Vite build; available in the repository |
+| [`memorymedic-backend-13-tests-passed.png`](images/memorymedic-backend-13-tests-passed.png) | Dedicated local pytest screenshot showing 13 passing backend tests and one non-failing warning; added November 17 |
 
 Additional backend and performance screenshots should be added only after capturing the corresponding evidence. Do not relabel illustrative images as independent benchmark results.
 
@@ -1642,6 +1644,25 @@ PYTHONPATH=. backend/.venv/bin/python -m pytest backend/tests -v
 
 The warning is a deprecation notice from FastAPI/Starlette test tooling regarding `TestClient`; it does not indicate a failed backend test. The recorded terminal output is also preserved in [`memorymedic-terminal-output.txt`](memorymedic-terminal-output.txt).
 
+#### Backend Test Verification Screenshot
+
+![MemoryMedic backend — 13 tests passed](images/memorymedic-backend-13-tests-passed.png)
+
+The screenshot documents the successful local verification of the MemoryMedic AI 2.0 FastAPI backend. It was added to the repository on November 17, 2026.
+
+**Recorded results:**
+
+- **Testing framework:** pytest
+- **Backend tests collected:** 13
+- **Tests passed:** 13
+- **Tests failed:** 0
+- **Warnings:** 1 non-failing deprecation warning
+- **Verification status:** Passed
+
+The tests cover API routes, historical telemetry validation, prediction requests, and error handling. Some tests use fake estimators to isolate API behavior. These results confirm the tested backend behavior under the configured conditions; they do not independently demonstrate machine-learning accuracy or production readiness.
+
+**Evidence file:** [`docs/images/memorymedic-backend-13-tests-passed.png`](images/memorymedic-backend-13-tests-passed.png)
+
 ### C.2 React dashboard component tests
 
 **Command (`frontend/`):**
@@ -1720,11 +1741,11 @@ Do not treat the test count alone as a fixed guarantee for future revisions: it 
 
 ### C.7 Evidence completeness
 
-The project now has historical model results, example dashboard workload captures, a preserved backend test log, frontend workflow evidence, and a combined local test screenshot. The additional independent application tests, false-alert measurements, detection-latency measurements, monitoring overhead benchmarks, and real-browser end-to-end checks described in Section 20 remain future work.
+The project now has historical model results, example dashboard workload captures, a preserved backend test log, a dedicated backend verification screenshot, frontend workflow evidence, and a combined local test screenshot. The additional independent application tests, false-alert measurements, detection-latency measurements, monitoring overhead benchmarks, and real-browser end-to-end checks described in Section 20 remain future work.
 
 ---
 
 **Report prepared by:** Leslie Raya  
-**Last updated:** November 16, 2026  
+**Last updated:** November 17, 2026  
 **Document:** `docs/evaluation_report.md`  
 **Status:** Research and portfolio prototype; additional benchmarking required for production claims.
