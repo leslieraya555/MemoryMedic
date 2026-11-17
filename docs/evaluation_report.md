@@ -4,14 +4,14 @@
 
 **Project:** MemoryMedic / MemoryMedic AI 2.0
 
-**Report Updated:** November 17, 2026  
+**Report Updated:** November 17, 2026
 **Report edition:** Consolidated evaluation, software verification, and screenshot evidence
 
 **Historical Model Benchmark:** September 2026
 
 **Software Verification:** October–November 17, 2026
 
-**Repository:** [MemoryMedic on GitHub](https://github.com/leslieraya555/MemoryMedic)  
+**Repository:** [MemoryMedic on GitHub](https://github.com/leslieraya555/MemoryMedic)
 **Evidence note:** Historical model evaluation and subsequent software verification are reported separately; screenshots supplement, rather than substitute for, reproducible results.
 
 ---
@@ -1745,7 +1745,7 @@ The project now has historical model results, example dashboard workload capture
 
 ---
 
-**Report prepared by:** Leslie Raya  
-**Last updated:** November 17, 2026  
-**Document:** `docs/evaluation_report.md`  
+**Report prepared by:** Leslie Raya
+**Last updated:** November 17, 2026
+**Document:** `docs/evaluation_report.md`
 **Status:** Research and portfolio prototype; additional benchmarking required for production claims.
