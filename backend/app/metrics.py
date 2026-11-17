@@ -6,6 +6,7 @@ validated numeric telemetry for dashboards and analysis.
 """
 
 import csv
+import os
 import math
 from collections import deque
 from pathlib import Path
@@ -20,7 +21,7 @@ router = APIRouter(
 )
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DATA_ROOT = PROJECT_ROOT / "data"
+DATA_ROOT = Path(os.environ.get("MEMORYMEDIC_DATA_ROOT", str(PROJECT_ROOT / "data")))
 
 Workload = Literal[
     "normal_workload",

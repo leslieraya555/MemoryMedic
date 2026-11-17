@@ -7,6 +7,7 @@ and an already-trained, locally trusted model artifact.
 
 from functools import lru_cache
 import math
+import os
 from pathlib import Path
 
 import joblib
@@ -24,7 +25,7 @@ router = APIRouter(
 )
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-MODEL_ROOT = PROJECT_ROOT / "artifacts" / "ml"
+MODEL_ROOT = Path(os.environ.get("MEMORYMEDIC_MODEL_ROOT", str(PROJECT_ROOT / "artifacts" / "ml")))
 
 
 class TelemetrySample(BaseModel):
