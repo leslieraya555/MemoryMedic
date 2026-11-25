@@ -2,9 +2,9 @@
 
 **Author:** Leslie Raya  
 **Project:** MemoryMedic / MemoryMedic AI 2.0  
-**Report Updated:** November 3, 2026  
+**Report Updated:** November 23, 2026  
 **Historical Model Benchmark:** September 2026  
-**Software Verification:** October 23–November 3, 2026  
+**Software Verification:** October 23–November 17, 2026  
 **Repository:** [MemoryMedic on GitHub](https://github.com/leslieraya555/MemoryMedic)
 
 ---
@@ -43,6 +43,7 @@ MemoryMedic AI 2.0 builds on the original C++ monitoring and machine-learning pi
 | Original Python regression tests | 21 passed |
 | MemoryMedic AI 2.0 backend tests | 13 passed |
 | Frontend production build | Successful |
+| Playwright real-browser tests | Five passing Chromium tests (November 17, 2026) |
 | API prediction demonstration | Successful |
 | GitHub Actions | Successful checks observed |
 
@@ -746,7 +747,7 @@ It does not establish an independently measured false-positive rate, real-world 
 - [x] Prediction request completes.
 - [x] Prediction results display.
 - [x] Frontend production build completes.
-- [ ] Add automated browser-based end-to-end tests.
+- [x] Add automated browser-based end-to-end tests (Playwright Chromium; five passing tests).
 - [ ] Evaluate dashboard behavior with additional independent workloads.
 - [ ] Implement and evaluate live monitoring if required.
 
@@ -1129,16 +1130,9 @@ Test variations in:
 - Application workloads.
 - Operating conditions.
 
-## 20.7 Add Frontend Integration Tests
+## 20.7 Browser Integration Testing (Implemented)
 
-Automate checks for:
-
-- Dashboard loading.
-- API connectivity.
-- Workload selection.
-- Memory visualization.
-- Prediction requests.
-- Error and loading states.
+Five Playwright Chromium tests passed locally on November 17, 2026. They exercise the real React/Vite frontend and FastAPI backend with isolated test-fixture data and a saved fixture model. The tests cover initial telemetry rendering, workload selection, prediction requests, refresh behavior, and a simulated API outage. Further cross-browser, accessibility, and long-duration testing remain future work. These tests demonstrate software integration, not independent ML accuracy.
 
 ## 20.8 Add Grouped Cross-Validation if Required
 
@@ -1154,7 +1148,7 @@ Report fold membership and performance variation while preserving a separate fin
 | High | Expand independent benchmark workloads | Planned |
 | High | Measure false alarms and detection latency | Planned |
 | High | Measure monitoring overhead | Planned |
-| Medium | Implement browser-based integration tests | Planned |
+| Complete | Implement Playwright Chromium integration tests (five passing) | Verified in local test run |
 | Medium | Evaluate probability calibration | Planned |
 | Medium | Add live process-monitoring integration | Future development |
 | Medium | Implement configurable alerting | Future development |
@@ -1185,6 +1179,7 @@ Subsequent software verification demonstrated:
 - Successful React dashboard rendering.
 - Successful frontend production builds.
 - Successful configured GitHub Actions checks.
+- Five passing Playwright Chromium real-browser tests with isolated test fixtures.
 
 The MemoryMedic AI 2.0 dashboard also successfully displayed normal-workload telemetry and model predictions.
 
@@ -1193,6 +1188,46 @@ The MemoryMedic AI 2.0 dashboard also successfully displayed normal-workload tel
 Its current evaluation provides evidence that the implemented system works on controlled synthetic workloads and selected local demonstrations.
 
 Additional independent benchmarking is required before making strong claims about general-purpose memory-leak detection, real-world reliability, calibrated risk probabilities, or production readiness.
+
+---
+
+# 23. November 17, 2026 — Playwright Browser Integration Verification
+
+This verification was completed after the original historical machine-learning benchmark. The Playwright suite tested the real Chromium browser, React/Vite dashboard, and FastAPI API. Its test dataset and saved sklearn model were generated as isolated fixtures under the ignored `artifacts/e2e/` directory. **These browser test results do not constitute an independent test of memory-leak detection accuracy.**
+
+## 23.1 Recorded test cases
+
+| Browser test | Locally reported status |
+| --- | --- |
+| Opens the real dashboard and displays CSV telemetry | Passed |
+| Loads all four historical workloads from the metrics endpoint | Passed |
+| Sends a real prediction request to the saved fixture model | Passed |
+| Refreshes historical telemetry using the real API | Passed |
+| Shows an understandable error after a simulated metrics outage | Passed |
+
+**Local result:** five passing Chromium tests; no failing tests were shown in the November 17, 2026 Playwright report screenshot.
+
+![Five Playwright tests passed](images/memorymedic-playwright-e2e-5-tests-passed.png)
+
+## 23.2 Reproducible verification
+
+The source of truth is the version-controlled [`e2e/`](../e2e/) suite and the isolated [Playwright GitHub Actions workflow](../.github/workflows/playwright-e2e.yml). Dependency installation and setup are documented in the [E2E README](../e2e/README.md) and [installation guide](playwright_e2e_guide.md). Once the isolated Python environment and Chromium have been installed, execute from the repository root:
+
+```bash
+export MEMORYMEDIC_E2E_PYTHON="$PWD/artifacts/e2e-venv/bin/python"
+cd e2e
+npm test
+npm run report
+```
+
+Playwright starts the application and test API servers automatically; it does not require replacing the existing Vitest or backend pytest tests. The configured workflow also uploads its HTML report and failure traces when available.
+
+## 23.3 Interpretation and limitations
+
+- Browser E2E success demonstrates that the connected UI, API, telemetry parser, and saved-model inference operate for the tested fixture scenarios.
+- The fixtures are synthetic, intentionally generated for integration testing; they are **not an independent machine-learning benchmark**.
+- The September 2026 held-out benchmark remains separate and must not be retroactively combined with these five browser tests.
+- Important remaining experiments include unfamiliar application behavior, false-positive alerts per hour, detection latency, process-monitoring overhead, repeatability, and probability calibration.
 
 ---
 
@@ -1228,7 +1263,7 @@ Additional independent benchmarking is required before making strong claims abou
 
 **Report Prepared By:** Leslie Raya  
 **Project:** MemoryMedic AI 2.0  
-**Last Updated:** November 3, 2026  
+**Last Updated:** November 23, 2026  
 **Document:** `docs/evaluation_report.md`
 
 **End of Evaluation Report**

@@ -445,7 +445,25 @@ The **existing** `frontend/src/App.test.jsx` uses Vitest and React Testing Libra
 3. Requesting and displaying an AI prediction.
 4. Showing a backend error message.
 
-These are **component tests with mocks**, not real-browser end-to-end tests against a running backend. Browser integration testing remains future work.
+The **Vitest tests are component tests with mocked responses**, not browser end-to-end tests. A separate Playwright suite now checks the real React/Vite frontend and FastAPI backend in Chromium. The Playwright fixture model tests integration, **not general-purpose ML accuracy**.
+
+### Playwright real-browser end-to-end tests (Chromium)
+
+**Recorded November 17, 2026 local result:** five Playwright Chromium tests passed. They cover dashboard loading, four historical workloads, a prediction API request, historical refresh, and a simulated metrics outage. The browser suite uses a real FastAPI server but isolated synthetic fixture data and a fixture model; this **does not** validate ML performance on unfamiliar applications.
+
+Run from the project root after installing the isolated test dependencies described in [the E2E README](e2e/README.md):
+
+```bash
+cd ~/Desktop/MemoryMedic
+export MEMORYMEDIC_E2E_PYTHON="$PWD/artifacts/e2e-venv/bin/python"
+cd e2e
+npm test
+npm run report
+```
+
+The workflow is [MemoryMedic Browser E2E CI](https://github.com/leslieraya555/MemoryMedic/actions/workflows/playwright-e2e.yml). The full installation procedure is in [docs/playwright_e2e_guide.md](docs/playwright_e2e_guide.md).
+
+![Five passing Playwright browser tests](docs/images/memorymedic-playwright-e2e-5-tests-passed.png)
 
 ### Original Python ML regression tests (Ubuntu or compatible Python environment)
 
@@ -474,6 +492,7 @@ ctest --test-dir build --output-on-failure
 | [MemoryMedic CI](https://github.com/leslieraya555/MemoryMedic/actions/workflows/ci.yml) | C++ build and CTest, ML regression tests, sample validation, and shell syntax. |
 | [Backend API CI](https://github.com/leslieraya555/MemoryMedic/actions/workflows/backend-ci.yml) | Python syntax checks and backend pytest. |
 | [Dashboard CI](https://github.com/leslieraya555/MemoryMedic/actions/workflows/frontend-ci.yml) | npm installation, frontend lint, Vitest, production build, and output verification. |
+| [Browser E2E CI](https://github.com/leslieraya555/MemoryMedic/actions/workflows/playwright-e2e.yml) | Real Chromium, React/Vite, FastAPI and Playwright integration tests on isolated test fixtures. |
 
 Check [the Actions page](https://github.com/leslieraya555/MemoryMedic/actions) for the actual status of the commit you want to present. A green CI run establishes only that the **configured checks** passed for that commit.
 
@@ -540,7 +559,7 @@ The checked-in [backend terminal test log](docs/memorymedic-terminal-output.txt)
 ### Next priorities
 
 - [x] Correct the README test status so it reflects the implemented Vitest component suite.
-- [ ] Run and record real-browser end-to-end integration tests against a running API.
+- [x] Run and record real-browser Playwright integration tests against a running API (five passing Chromium tests; fixture model only).
 - [ ] Evaluate previously unseen application and memory-allocation behaviors.
 - [ ] Measure false positives, false alerts per hour, and detection latency across independent runs.
 - [ ] Benchmark monitoring CPU/memory overhead and repeatability.
@@ -560,6 +579,8 @@ The checked-in [backend terminal test log](docs/memorymedic-terminal-output.txt)
 - [Full evaluation and verification report](docs/evaluation_report.md)
 - [System architecture](docs/architecture.md)
 - [Model card and model-use limitations](docs/model_card.md)
+- [Playwright E2E installation guide](docs/playwright_e2e_guide.md)
+- [Playwright E2E test suite README](e2e/README.md)
 - [Interview preparation guide](docs/interview_guide.md)
 - [Dataset and collection guide](data/README.md)
 - [Getting-started guide](START_HERE.md)
